@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}SkyTrace · 对象知识库{% endblock %}
+{% block content %}
+  <p class="text-xs tracking-[0.22em] text-stone-500">先写对象，再谈成片</p>
+  <h1 class="mt-3 max-w-3xl font-serif text-4xl leading-tight sm:text-5xl">把机位、光线和季节记在拍摄对象上。</h1>
+  <p class="mt-5 max-w-2xl text-base leading-7 text-stone-700">SkyTrace 不是照片流。一篇笔记只挂在一个对象下，成片、机位、前期、后期、灯光和动作都回到同一页。</p>
+
+  <section class="mt-12" aria-labelledby="channels-heading">
+    <h2 id="channels-heading" class="font-serif text-2xl">三个频道</h2>
+    <div class="mt-4 grid gap-4 md:grid-cols-3">
+      {% for channel in channels %}
+        <a href="/c/{{ channel.code }}" class="block border border-stone-300 bg-white/70 p-5 transition hover:border-stone-800">
+          <p class="text-xs tracking-[0.2em] text-stone-500">0{{ loop.index }}</p>
+          <h3 class="mt-3 font-serif text-2xl">{{ channel.name }}</h3>
+          <p class="mt-2 text-sm leading-6 text-stone-700">{{ channel.summary }}</p>
+        </a>
+      {% endfor %}
+    </div>
+    <div id="channel-counts" class="mt-4 text-sm text-stone-600" hx-get="/partials/channel-counts" hx-trigger="load">
+      对象库存加载后会显示在这里。
+    </div>
+  </section>
+
+  <section class="mt-12 border border-dashed border-stone-400 p-6" aria-labelledby="featured-heading">
+    <h2 id="featured-heading" class="font-serif text-2xl">精选</h2>
+    <p class="mt-3 text-sm leading-6 text-stone-700">精选位还空着。只有过审的笔记才会出现在这里。</p>
+  </section>
+
+  <section class="mt-12 grid gap-8 md:grid-cols-2" aria-labelledby="search-heading">
+    <div>
+      <h2 id="search-heading" class="font-serif text-2xl">搜索</h2>
+      <p class="mt-3 text-sm leading-6 text-stone-700">索引已经建好。查询本身还没开放，可以先进入搜索页看占位说明。</p>
+      <form action="/search" method="get" class="mt-4 flex gap-2">
+        <label class="sr-only" for="home-q">搜索词</label>
+        <input id="home-q" name="q" type="search" placeholder="对象、机位或光线" class="w-full border border-stone-400 bg-white px-3 py-2 text-sm">
+        <button type="submit" class="bg-ink px-4 py-2 text-sm text-paper">搜索</button>
+      </form>
+    </div>
+    <div>
+      <h2 class="font-serif text-2xl">{% if current_user %}帐号{% else %}登录{% endif %}</h2>
+      {% if current_user %}
+        <p class="mt-3 text-sm leading-6 text-stone-700">当前是 {{ current_user.display_name }}。发布入口已解锁，表单仍是占位。</p>
+        <a href="/publish" class="mt-4 inline-block text-sm underline decoration-stone-400 underline-offset-4">去发布占位页</a>
+      {% else %}
+        <p class="mt-3 text-sm leading-6 text-stone-700">预置作者和审核员可以登录。这里没有注册入口。</p>
+        <a href="/login" class="mt-4 inline-block bg-stamp px-4 py-2 text-sm text-white">登录</a>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

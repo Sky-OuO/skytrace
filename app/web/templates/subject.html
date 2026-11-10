@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ subject.name }} · SkyTrace{% endblock %}
+{% block content %}
+  <p class="text-xs tracking-[0.22em] text-stone-500">{{ channel_name }} · {{ type_name }}</p>
+  <h1 class="mt-3 font-serif text-4xl">{{ subject.name }}</h1>
+  <p class="mt-4 max-w-2xl text-sm leading-7 text-stone-700">对象页双模板还没做。当前只显示这条 stub，笔记、导语和封面都还空着。</p>
+  {% if axes %}
+    <p class="mt-6 text-sm">本页要突出的条件：{{ axes }}</p>
+  {% endif %}
+  <p class="mt-8 text-xs text-stone-500">{{ subject.slug }}</p>
+{% endblock %}
