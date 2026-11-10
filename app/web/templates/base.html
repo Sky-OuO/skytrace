@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{% block title %}SkyTrace{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: "#f3efe7",
+            ink: "#221c16",
+            stamp: "#8f3d2a"
+          },
+          fontFamily: {
+            sans: ['"Noto Sans SC"', '"Source Han Sans SC"', '"PingFang SC"', '"Microsoft YaHei"', '"Noto Sans CJK SC"', "sans-serif"],
+            serif: ['"Iowan Old Style"', "Palatino", '"Songti SC"', '"Noto Serif SC"', "serif"]
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background: #f3efe7; color: #221c16; }
+    :focus-visible { outline: 2px solid #8f3d2a; outline-offset: 3px; }
+  </style>
+</head>
+<body class="min-h-screen bg-paper font-sans text-ink antialiased">
+  <a href="#content" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:bg-white focus:px-3 focus:py-2">跳到正文</a>
+  <header class="border-b border-stone-300">
+    <div class="mx-auto flex max-w-5xl flex-wrap items-end justify-between gap-x-8 gap-y-4 px-4 py-5 sm:px-6">
+      <a href="/" class="block">
+        <span class="font-serif text-2xl tracking-wide">SkyTrace</span>
+        <span class="mt-1 block text-xs tracking-[0.18em] text-stone-500">摄影对象知识库</span>
+      </a>
+      <nav aria-label="主导航" class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <a href="/" class="{% if active == 'home' %}font-medium text-stamp{% endif %}">首页</a>
+        <a href="/c/landscape" class="{% if active == 'landscape' %}font-medium text-stamp{% endif %}">风光</a>
+        <a href="/c/culture" class="{% if active == 'culture' %}font-medium text-stamp{% endif %}">人文</a>
+        <a href="/c/portrait" class="{% if active == 'portrait' %}font-medium text-stamp{% endif %}">人像</a>
+        <a href="/search" class="{% if active == 'search' %}font-medium text-stamp{% endif %}">搜索</a>
+        <a href="/ideas" class="{% if active == 'ideas' %}font-medium text-stamp{% endif %}">思想开源<span class="ml-1 align-middle text-[10px] tracking-wide text-stone-500">后置</span></a>
+        {% if current_user %}
+          <span class="text-stone-600">{{ current_user.display_name }}</span>
+          <form method="post" action="/logout" class="inline">
+            <button type="submit" class="underline decoration-stone-400 underline-offset-4">登出</button>
+          </form>
+        {% else %}
+          <a href="/login" class="{% if active == 'login' %}font-medium text-stamp{% endif %}">登录</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+  <main id="content" class="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="border-t border-stone-300">
+    <p class="mx-auto max-w-5xl px-4 py-6 text-xs text-stone-500 sm:px-6">对象页和结构化笔记是主线。这是本地原型，不开放注册。</p>
+  </footer>
+</body>
+</html>

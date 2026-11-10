@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}登录 · SkyTrace{% endblock %}
+{% block content %}
+  <div class="mx-auto max-w-md">
+    <h1 class="font-serif text-4xl">登录</h1>
+    <p class="mt-4 text-sm leading-7 text-stone-700">只接受预置帐号。没有注册入口。</p>
+    {% if error %}
+      <p role="alert" class="mt-4 border border-stamp/40 bg-white px-3 py-2 text-sm text-stamp">{{ error }}</p>
+    {% endif %}
+    <form method="post" action="/login" class="mt-6 space-y-4">
+      <input type="hidden" name="next" value="{{ next }}">
+      <div>
+        <label for="email" class="block text-sm">邮箱</label>
+        <input id="email" name="email" type="email" autocomplete="username" required class="mt-1 w-full border border-stone-400 bg-white px-3 py-2">
+      </div>
+      <div>
+        <label for="password" class="block text-sm">密码</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required class="mt-1 w-full border border-stone-400 bg-white px-3 py-2">
+      </div>
+      <button type="submit" class="bg-ink px-4 py-2 text-sm text-paper">登录</button>
+    </form>
+  </div>
+{% endblock %}

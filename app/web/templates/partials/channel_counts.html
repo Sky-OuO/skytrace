@@ -1,0 +1,1 @@
+<p class="text-sm text-stone-600">已入库对象：{% for item in channels %}{{ item.name }} {{ item.subject_count }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
