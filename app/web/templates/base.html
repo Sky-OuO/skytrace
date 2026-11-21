@@ -55,6 +55,20 @@
     .filter-links { display: flex; gap: 12px; margin-top: 8px; }
     .filter-links a[aria-current="page"] { color: #8f3d2a; }
     .feed-sentinel { column-span: all; height: 8px; }
+    .publish-form, .review-card { max-width: 40rem; }
+    .publish-form input, .publish-form textarea, .publish-form select, .review-card input, .review-card select { width: 100%; border: 1px solid #c4bdb2; background: #fff; padding: 8px; margin-top: 4px; }
+    .publish-form label, .review-card label { display: block; margin-top: 14px; font-size: 14px; }
+    .choice { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; font-size: 14px; }
+    .choice input { width: auto; margin-top: 3px; }
+    .tag-set { margin-top: 16px; border: 0; padding: 0; }
+    .form-actions { display: flex; gap: 8px; }
+    button.primary, .form-actions button { background: #221c16; color: #f3efe7; padding: 8px 14px; margin-top: 16px; }
+    .form-actions button:last-child { background: transparent; color: #221c16; border: 1px solid #221c16; }
+    .form-error { margin-top: 12px; padding: 8px 10px; background: #fff; border-left: 3px solid #8f3d2a; }
+    .review-card { margin-top: 16px; background: #fff; border: 1px solid #e4ddd2; padding: 12px; }
+    .note-list { list-style: none; padding: 0; }
+    .note-list li { margin-top: 14px; background: #fff; border: 1px solid #e4ddd2; padding: 12px; }
+    .status-pill { display: inline-block; margin-left: 6px; border: 1px solid #8f3d2a; color: #8f3d2a; font-size: 12px; padding: 0 6px; }
     @media (max-width: 640px) {
       .note-card dl { grid-template-columns: 1fr; }
     }
@@ -75,7 +89,7 @@
         <a href="/search" class="{% if active == 'search' %}font-medium text-stamp{% endif %}">搜索</a>
         <a href="/publish" class="{% if active == 'publish' %}font-medium text-stamp{% endif %}">记一笔</a>
         {% if current_user %}
-          <span class="text-stone-600">{{ current_user.display_name }}</span>
+          <a href="/me" class="{% if active == 'me' %}font-medium text-stamp{% endif %}">{{ current_user.display_name }}</a>
           <form method="post" action="/logout" class="inline">
             <button type="submit" class="underline decoration-stone-400 underline-offset-4">登出</button>
           </form>

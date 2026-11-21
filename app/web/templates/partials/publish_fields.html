@@ -1,0 +1,21 @@
+{% if note_type == "finished" %}
+  <label for="image">成片</label>
+  <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+  <label for="body">一句拍摄说明</label>
+  <textarea id="body" name="body" rows="3" placeholder="例如：阴天窗光作主光，身干与窗大约四十五度，近处暖灯关掉。">{{ body }}</textarea>
+{% else %}
+  <label for="body">补充一句，可选</label>
+  <textarea id="body" name="body" rows="2">{{ body }}</textarea>
+  {% for key, label, required in field_inputs %}
+    <label for="field-{{ key }}">{{ label }}{% if required %}（必填）{% endif %}</label>
+    <textarea id="field-{{ key }}" name="field_{{ key }}" rows="2"></textarea>
+  {% endfor %}
+  <label for="image">示意图，可选</label>
+  <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+{% endif %}
+{% if needs_auth %}
+  <label class="choice">
+    <input type="checkbox" name="portrait_auth" value="on">
+    可展示 / 肖像授权：画面里能认出的人已经同意公开展示
+  </label>
+{% endif %}

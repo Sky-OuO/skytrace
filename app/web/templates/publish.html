@@ -1,7 +1,52 @@
 {% extends "base.html" %}
-{% block title %}发布 · SkyTrace{% endblock %}
+{% block title %}记一笔 · SkyTrace{% endblock %}
 {% block content %}
-  <p class="text-xs tracking-[0.22em] text-stone-500">已登录</p>
-  <h1 class="mt-3 font-serif text-4xl">发布</h1>
-  <p class="mt-4 max-w-2xl text-sm leading-7 text-stone-700">发布表单还没做。登录状态已经确认，选择对象、填写笔记和肖像授权会在后面接上。</p>
+  <form class="publish-form" method="post" action="/publish" enctype="multipart/form-data">
+    <h1 class="font-serif text-3xl">记一笔</h1>
+    <p class="mt-2 text-sm leading-6 text-stone-700">只写自己会的那一块。成片一张图加一句就够。</p>
+    {% if error %}
+      <p class="form-error" role="alert">{{ error }}</p>
+    {% endif %}
+    <label for="topic-q">题材</label>
+    <input id="topic-q" name="q" type="search" placeholder="例如窗边人像、黄山、西餐厅" hx-get="/partials/topic-picker" hx-trigger="keyup changed delay:200ms" hx-target="#topic-results" hx-include="[name='q'],[name='subject_slug']">
+    <div id="topic-results" hx-get="/partials/topic-picker" hx-trigger="change" hx-target="#topic-results" hx-swap="innerHTML" hx-include="[name='q'],[name='subject_slug']">
+      {% include "partials/topic_picker.html" %}
+    </div>
+    <label class="choice"><input type="radio" name="subject_slug" value="{{ unsorted_slug }}" {% if subject_slug == unsorted_slug %}checked{% endif %}>先待归类，等编辑挂到题材上</label>
+
+    <label for="note-type">笔记类型</label>
+    <select id="note-type" name="type" hx-get="/partials/publish-fields" hx-trigger="change" hx-target="#type-fields" hx-include="closest form">
+      {% for code, name in note_types %}
+        <option value="{{ code }}" {% if code == note_type %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+
+    <div id="example-slot">
+      {% if examples %}
+        <label for="example">地点例子，可选</label>
+        <select id="example" name="example_id">
+          <option value="">不指定</option>
+          {% for example in examples %}
+            <option value="{{ example.id }}">{{ example.name }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+    </div>
+
+    <div id="type-fields">
+      {% include "partials/publish_fields.html" %}
+    </div>
+
+    <fieldset class="tag-set">
+      <legend>标签已按题材预填，可以改</legend>
+      {% for slug, name in tags %}
+        <label class="choice"><input type="checkbox" name="tags" value="{{ slug }}" {% if slug in selected_tags %}checked{% endif %}>{{ name }}</label>
+      {% endfor %}
+    </fieldset>
+
+    <p class="form-actions">
+      <button class="primary" type="submit" name="action" value="submit">提交</button>
+      <button type="submit" name="action" value="draft">存草稿</button>
+    </p>
+  </form>
 {% endblock %}

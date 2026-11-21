@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.auth.backend import apply_login_cookie, clear_login_cookie
-from app.auth.deps import credentials_for, get_database_strategy, get_optional_user, get_user_manager
+from app.auth.deps import credentials_for, get_database_strategy, get_optional_user, get_user_manager, require_user
 from app.auth.manager import UserManager
 from app.catalog import CHANNELS, CHANNEL_BY_CODE
 from app.domain import UNSORTED_SLUG
@@ -17,6 +17,8 @@ from app.models import Subject, User
 from app.services.storage import resolve_storage_path
 from app.services.feed import load_feed
 from app.services.topics import approved_note_and_subject, public_subject, topic_context
+from app.services.publishing import decide_ticket, find_topics, my_notes, pending_tickets
+from app.web.publish import accept_publish, publish_fields, render_publish, topic_picker
 from app.web.templating import TEMPLATES
 from fastapi_users.authentication.strategy.db import DatabaseStrategy
 
@@ -108,6 +110,10 @@ async def channel_page(channel: str, request: Request, user: User | None = Depen
     return render(request, "channel.html", user, active=channel, channel=spec)
 
 
+async def find_topics_for_review(session: AsyncSession):
+    return await find_topics(session, "", limit=50)
+
+
 def _parse_uuid(value: str) -> UUID:
     try:
         return UUID(value)
@@ -175,10 +181,62 @@ async def note_page(note_id: str, session: AsyncSession = Depends(get_session)):
 
 
 @router.get("/publish")
-async def publish(request: Request, user: User | None = Depends(get_optional_user)):
+async def publish(
+    request: Request,
+    subject: str | None = None,
+    user: User | None = Depends(get_optional_user),
+    session: AsyncSession = Depends(get_session),
+):
     if user is None:
-        return RedirectResponse("/login?next=/publish", status_code=303)
-    return render(request, "publish.html", user, active="publish")
+        target = "/publish" if not subject else f"/publish?subject={subject}"
+        return RedirectResponse(f"/login?next={target}", status_code=303)
+    return await render_publish(request, user, session, subject_slug=subject or "")
+
+
+@router.post("/publish")
+async def publish_submit(
+    request: Request,
+    user: User = Depends(require_user),
+    session: AsyncSession = Depends(get_session),
+):
+    return await accept_publish(request, user, session)
+
+
+@router.get("/partials/topic-picker")
+async def topic_picker_partial(
+    request: Request,
+    q: str = "",
+    subject_slug: str = "",
+    session: AsyncSession = Depends(get_session),
+):
+    return await topic_picker(request, session, q, subject_slug)
+
+
+@router.get("/partials/publish-fields")
+async def publish_fields_partial(
+    request: Request,
+    type: str = "finished",
+    subject_slug: str = "",
+    session: AsyncSession = Depends(get_session),
+):
+    return await publish_fields(request, session, type, subject_slug)
+
+
+@router.get("/me")
+async def my_page(
+    request: Request,
+    notice: str | None = None,
+    user: User | None = Depends(get_optional_user),
+    session: AsyncSession = Depends(get_session),
+):
+    if user is None:
+        return RedirectResponse("/login?next=/me", status_code=303)
+    notes = await my_notes(session, user)
+    notices = {
+        "pending": "投稿已收到，当前是待审。还不会出现在首页、题材页和搜索里。",
+        "draft": "已存成草稿。草稿不会公开。",
+    }
+    return render(request, "me.html", user, active="me", notes=notes, notice=notices.get(notice or ""))
 
 
 @router.get("/search")
@@ -187,10 +245,41 @@ async def search(request: Request, q: str | None = None, user: User | None = Dep
 
 
 @router.get("/review")
-async def review(request: Request, user: User | None = Depends(get_optional_user)):
+async def review(
+    request: Request,
+    user: User | None = Depends(get_optional_user),
+    session: AsyncSession = Depends(get_session),
+):
     if user is None or user.role != "reviewer":
         raise ApiError(403, "FORBIDDEN", "只有审核员可以进入审核台。")
-    return render(request, "review.html", user, active="review")
+    tickets = await pending_tickets(session)
+    topics = await find_topics_for_review(session)
+    return render(request, "review.html", user, active="review", tickets=tickets, topics=topics)
+
+
+@router.post("/review/{ticket_id}")
+async def review_decide(
+    ticket_id: UUID,
+    request: Request,
+    user: User = Depends(require_user),
+    session: AsyncSession = Depends(get_session),
+):
+    if user.role != "reviewer":
+        raise ApiError(403, "FORBIDDEN", "只有审核员可以进入审核台。")
+    form = await request.form()
+    decision = str(form.get("decision") or "")
+    reason = str(form.get("reason") or "")
+    subject_raw = str(form.get("subject_id") or "")
+    subject_id = UUID(subject_raw) if subject_raw else None
+    await decide_ticket(
+        session,
+        user,
+        ticket_id,
+        decision=decision,
+        reason=reason,
+        subject_id=subject_id,
+    )
+    return RedirectResponse("/review", status_code=303)
 
 
 @router.get("/ideas")

@@ -212,7 +212,7 @@ async def test_login_logout_and_review_gate(client: AsyncClient):
     assert (await client.get("/review")).status_code == 403
     publish = await client.get("/publish")
     assert publish.status_code == 200
-    assert "发布表单还没做" in publish.text
+    assert "一句拍摄说明" in publish.text
 
     logged_out = await client.post("/api/v1/auth/logout")
     assert logged_out.status_code == 200
@@ -220,7 +220,7 @@ async def test_login_logout_and_review_gate(client: AsyncClient):
 
     form_login = await client.post("/login", data={**AUTHOR, "next": "/publish"}, follow_redirects=True)
     assert form_login.status_code == 200
-    assert "发布表单还没做" in form_login.text
+    assert "一句拍摄说明" in form_login.text
     await client.post("/logout")
 
     await client.post("/api/v1/auth/login", json=REVIEWER)
@@ -393,8 +393,8 @@ async def test_public_note_read_and_submit_guards(client: AsyncClient, engine: A
     assert portrait.status_code == 422
     assert "肖像授权" in portrait.json()["error"]["message"]
     postponed = await client.post(f"/api/v1/notes/{spot_id}/submit")
-    assert postponed.status_code == 422
-    assert "后续天数" in postponed.json()["error"]["message"]
+    assert postponed.status_code == 200, postponed.text
+    assert postponed.json()["status"] == "pending_review"
     conflict = await client.post(f"/api/v1/notes/{approved_id}/submit")
     assert conflict.status_code == 409
     assert conflict.json()["error"]["code"] == "CONFLICT"
