@@ -7,6 +7,7 @@ from app.auth.backend import apply_login_cookie, clear_login_cookie
 from app.auth.deps import credentials_for, get_database_strategy, get_optional_user, get_user_manager
 from app.auth.manager import UserManager
 from app.catalog import CHANNELS, CHANNEL_BY_CODE
+from app.domain import UNSORTED_SLUG
 from app.config import get_settings
 from app.db import get_session
 from app.errors import ApiError
@@ -49,7 +50,11 @@ async def home(request: Request, user: User | None = Depends(get_optional_user))
 
 @router.get("/partials/channel-counts")
 async def channel_counts(request: Request, session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(Subject.primary_channel, func.count()).group_by(Subject.primary_channel))
+    result = await session.execute(
+        select(Subject.primary_channel, func.count())
+        .where(Subject.slug != UNSORTED_SLUG)
+        .group_by(Subject.primary_channel)
+    )
     counts = {code: count for code, count in result.all()}
     items = [
         {"name": channel["name"], "subject_count": int(counts.get(channel["code"], 0))}
@@ -75,7 +80,7 @@ async def subject_page(
 ):
     result = await session.execute(select(Subject).where(Subject.slug == slug))
     subject = result.scalar_one_or_none()
-    if subject is None:
+    if subject is None or subject.slug == UNSORTED_SLUG:
         raise ApiError(404, "NOT_FOUND", "对象不存在")
     channel = CHANNEL_BY_CODE.get(subject.primary_channel)
     return render(

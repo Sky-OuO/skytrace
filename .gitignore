@@ -12,3 +12,4 @@ dist/
 build/
 var/media/*
 !var/media/.gitkeep
+var/*.db

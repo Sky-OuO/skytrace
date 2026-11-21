@@ -4,9 +4,18 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, Column, DateTime, Index, Integer, String, Text, UniqueConstraint, text
+from sqlalchemy import JSON, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, Uuid, text
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlmodel import Field, SQLModel
+
+
+def json_column(*, nullable: bool) -> Column:
+    """SQLite 走通用 JSON，PostgreSQL 走 JSONB。每次新建类型对象，避免列之间共用。"""
+    return Column(JSON().with_variant(JSONB(), "postgresql"), nullable=nullable)
+
+
+def search_column() -> Column:
+    return Column(Text().with_variant(TSVECTOR(), "postgresql"), nullable=True)
 
 
 def utcnow() -> datetime:
@@ -54,7 +63,7 @@ class Subject(SQLModel, table=True):
         UniqueConstraint("slug", name="uq_subjects_slug"),
         CheckConstraint("type IN ('location', 'scene', 'theme')", name="ck_subjects_type"),
         CheckConstraint(
-            "primary_channel IN ('landscape', 'culture', 'portrait')",
+            "primary_channel IN ('landscape', 'portrait')",
             name="ck_subjects_primary_channel",
         ),
         Index("ix_subjects_primary_channel_type", "primary_channel", "type"),
@@ -66,17 +75,38 @@ class Subject(SQLModel, table=True):
     name: str = Field(max_length=200, nullable=False)
     type: str = Field(max_length=32, nullable=False)
     primary_channel: str = Field(max_length=32, nullable=False)
-    condition_axes: list[str] = Field(
-        default_factory=list,
-        sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
-    )
+    condition_axes: list[str] = Field(default_factory=list, sa_column=json_column(nullable=False))
     geo_text: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     safety_notes: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    tagline: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    aliases: list[str] = Field(default_factory=list, sa_column=json_column(nullable=False))
+    guide: dict[str, Any] | None = Field(default=None, sa_column=json_column(nullable=True))
     cover_media_id: UUID | None = Field(default=None, foreign_key="media.id", nullable=True)
     guide_summary: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     created_by: UUID | None = Field(default=None, foreign_key="users.id", nullable=True)
     created_at: datetime = Field(default_factory=utcnow, sa_column=_timestamptz())
-    search_vector: str | None = Field(default=None, sa_column=Column(TSVECTOR, nullable=True))
+    search_vector: str | None = Field(default=None, sa_column=search_column())
+
+
+class SubjectExample(SQLModel, table=True):
+    """同一题材下的地点或机位示例。咖啡馆、西餐厅、火车窗不是独立题材。"""
+
+    __tablename__ = "subject_examples"
+    __table_args__ = (
+        CheckConstraint(
+            "verify_status IN ('verified', 'pending')",
+            name="ck_subject_examples_verify_status",
+        ),
+        Index("ix_subject_examples_subject_sort", "subject_id", "sort_order"),
+    )
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    subject_id: UUID = Field(foreign_key="subjects.id", nullable=False, index=True)
+    name: str = Field(max_length=80, nullable=False)
+    geo_text: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    note: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    sort_order: int = Field(default=0, sa_column=Column(Integer, nullable=False, server_default=text("0")))
+    verify_status: str = Field(default="pending", max_length=32, nullable=False)
 
 
 class Note(SQLModel, table=True):
@@ -104,20 +134,25 @@ class Note(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     author_id: UUID = Field(foreign_key="users.id", nullable=False)
     subject_id: UUID = Field(foreign_key="subjects.id", nullable=False)
+    example_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(
+            Uuid(as_uuid=True),
+            ForeignKey("subject_examples.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+    )
     type: str = Field(max_length=32, nullable=False)
     title: str = Field(max_length=300, nullable=False)
     body: str = Field(default="", sa_column=Column(Text, nullable=False, server_default=text("''")))
-    fields: dict[str, Any] = Field(
-        default_factory=dict,
-        sa_column=Column(JSONB, nullable=False, server_default=text("'{}'::jsonb")),
-    )
+    fields: dict[str, Any] = Field(default_factory=dict, sa_column=json_column(nullable=False))
     status: str = Field(default="draft", max_length=32, nullable=False)
     portrait_auth_accepted: bool = Field(default=False, nullable=False)
     submitted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
     published_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
     created_at: datetime = Field(default_factory=utcnow, sa_column=_timestamptz())
     updated_at: datetime = Field(default_factory=utcnow, sa_column=_timestamptz())
-    search_vector: str | None = Field(default=None, sa_column=Column(TSVECTOR, nullable=True))
+    search_vector: str | None = Field(default=None, sa_column=search_column())
 
 
 class Media(SQLModel, table=True):

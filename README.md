@@ -18,7 +18,22 @@
 
 ## 从空库跑起来
 
-需要 Docker，用来起 PostgreSQL 16 和 Redis。应用本身在本机用 Uvicorn 跑。
+演示不需要 Docker、PostgreSQL 或 Redis。一条命令会建 SQLite、导入题材种子并启动页面：
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+python -m app.demo
+```
+
+浏览器打开 <http://127.0.0.1:8000>。数据库文件在 `var/skytrace.db`。重复执行 `python -m app.seed --prune` 会按 slug 更新种子，并删掉没有笔记的过期题材。
+
+可选 PostgreSQL：把 `DATABASE_URL` 设为 `postgresql+asyncpg://...` 后执行 `alembic upgrade head` 再 `python -m app.seed --prune`。迁移 `0002_topics` 加题材字段和 `subject_examples`。没有 Postgres 时不要跑 Alembic，SQLite 由程序按模型建表。
+
+Redis 只给 ARQ worker。演示主路径不入队。有 Redis 时可以另开终端跑 `arq app.worker.WorkerSettings`，它会空转。
+
+下面是早期依赖 Docker 的写法，现在不是默认路径：
 
 ```bash
 cp .env.example .env
@@ -66,14 +81,14 @@ source .venv/bin/activate
 pytest
 ```
 
-测试会另建 `skytrace_test`，重复跑迁移和种子，不写你的开发库。本机需要已经能用 `.env.example` 里的帐号连上 PostgreSQL 和 Redis（`docker compose up -d` 之后即可）。
+测试使用临时 SQLite，不写你的开发库，也不需要 PostgreSQL 或 Redis。本机没有 Redis 时，worker 那一条会跳过。
 
 手工：
 
-1. 首页能看到风光、人文、人像、搜索、思想开源（标着「后置」）和登录。公开页面里没有「私房」。
-2. 思想开源打开 `/ideas`，只说明本期后置、无功能，并能回到摄影频道。人文频道写明这两周没有种子对象。
+1. 首页导航是首页、人像、风光、搜索、记一笔和登录。公开页面里没有「私房」，导航里没有思想开源，也没有人文频道。`/ideas` 仍可直接打开，只是没有入口。
+2. 公开题材来自 `seeds/subjects.json`，数量在 30 到 50。窗边人像的示例含咖啡馆窗边、西餐厅靠窗、火车窗边，这些不是独立题材。
 3. 用作者帐号登录后再登出。未登录打开 `/publish` 会去登录页。作者打开 `/review` 得到 403，审核员可以进入占位审核台。
-4. `GET /api/v1/auth/me`、`/api/v1/vocab`、`/api/v1/channels`、`/api/v1/subjects` 可用。对象列表里有 10 条 stub，人文频道数量是 0。
+4. `GET /api/v1/auth/me`、`/api/v1/vocab`、`/api/v1/channels`、`/api/v1/subjects` 可用。对象列表是种子题材，不含隐藏的 `unsorted`。
 5. 登录后 `POST /api/v1/media` 上传一张图片，用返回的 `preview_url` 能读回同一份字节。未登录上传会 401。
 6. `DATA_MODEL.md` 与迁移一致。worker 能启动并因为队列为空而空转。
 

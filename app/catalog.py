@@ -1,6 +1,7 @@
-"""频道、公开词表和两周原型的 10 个对象 stub。
+"""公开频道和筛选词表。
 
-公开词表不得出现「私房」或性化一级标签。人文频道这两周没有种子对象。
+题材清单在 seeds/subjects.json，不在这里。公开导航只有人像和风光。
+公开词表不得出现「私房」或性化一级标签。
 """
 
 from typing import TypedDict
@@ -14,19 +15,14 @@ class ChannelDef(TypedDict):
 
 CHANNELS: tuple[ChannelDef, ...] = (
     {
-        "code": "landscape",
-        "name": "风光",
-        "summary": "地点对象。季节、时段和天气决定能不能拍。",
-    },
-    {
-        "code": "culture",
-        "name": "人文",
-        "summary": "人文频道这两周没有种子对象。",
-    },
-    {
         "code": "portrait",
         "name": "人像",
-        "summary": "场景对象。光线、环境和风格是这页要先写清的条件。",
+        "summary": "按题材学拍法。窗边、街头、夜景和棚内光线都是题材，不是某一家店。",
+    },
+    {
+        "code": "landscape",
+        "name": "风光",
+        "summary": "一座山、一片湖或一段江岸是一个题材。机位写在同一页，不拆成地点树。",
     },
 )
 
@@ -76,83 +72,3 @@ TAGS: tuple[tuple[str, str, str], ...] = (
 )
 
 
-class SubjectStub(TypedDict):
-    name: str
-    slug: str
-    type: str
-    primary_channel: str
-    condition_axes: list[str]
-
-
-SUBJECT_STUBS: tuple[SubjectStub, ...] = (
-    {
-        "name": "黄山",
-        "slug": "huangshan",
-        "type": "location",
-        "primary_channel": "landscape",
-        "condition_axes": ["季节", "时段"],
-    },
-    {
-        "name": "杭州西湖",
-        "slug": "hangzhou-west-lake",
-        "type": "location",
-        "primary_channel": "landscape",
-        "condition_axes": ["季节", "时段"],
-    },
-    {
-        "name": "上海外滩",
-        "slug": "shanghai-bund",
-        "type": "location",
-        "primary_channel": "landscape",
-        "condition_axes": ["时段", "天气"],
-    },
-    {
-        "name": "重庆洪崖洞",
-        "slug": "chongqing-hongyadong",
-        "type": "location",
-        "primary_channel": "landscape",
-        "condition_axes": ["时段", "夜景"],
-    },
-    {
-        "name": "富士山",
-        "slug": "mt-fuji",
-        "type": "location",
-        "primary_channel": "landscape",
-        "condition_axes": ["季节", "天气"],
-    },
-    {
-        "name": "茶卡盐湖",
-        "slug": "chaka-salt-lake",
-        "type": "location",
-        "primary_channel": "landscape",
-        "condition_axes": ["季节", "时段"],
-    },
-    {
-        "name": "咖啡馆窗边",
-        "slug": "cafe-window",
-        "type": "scene",
-        "primary_channel": "portrait",
-        "condition_axes": ["光线", "环境"],
-    },
-    {
-        "name": "城市夜景人像",
-        "slug": "city-night-portrait",
-        "type": "scene",
-        "primary_channel": "portrait",
-        "condition_axes": ["光线", "环境"],
-    },
-    {
-        "name": "漫展 Cos",
-        "slug": "expo-cos",
-        "type": "scene",
-        "primary_channel": "portrait",
-        "condition_axes": ["光线", "风格"],
-    },
-    {
-        "name": "窗光棚",
-        "slug": "window-light-studio",
-        "type": "scene",
-        "primary_channel": "portrait",
-        "condition_axes": ["布光", "光线"],
-    },
-)
