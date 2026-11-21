@@ -15,6 +15,7 @@ from app.db import get_session
 from app.errors import ApiError
 from app.models import Subject, User
 from app.services.storage import resolve_storage_path
+from app.services.feed import load_feed
 from app.services.topics import approved_note_and_subject, public_subject, topic_context
 from app.web.templating import TEMPLATES
 from fastapi_users.authentication.strategy.db import DatabaseStrategy
@@ -47,8 +48,41 @@ def render(
 
 
 @router.get("/")
-async def home(request: Request, user: User | None = Depends(get_optional_user)):
-    return render(request, "home.html", user, active="home")
+async def home(
+    request: Request,
+    channel: str | None = None,
+    user: User | None = Depends(get_optional_user),
+    session: AsyncSession = Depends(get_session),
+):
+    page = await load_feed(session, channel=channel, limit=6)
+    return render(
+        request,
+        "home.html",
+        user,
+        active="home",
+        cards=page["items"],
+        next_cursor=page["next_cursor"],
+        feed_channel=channel or "",
+    )
+
+
+@router.get("/partials/feed")
+async def feed_partial(
+    request: Request,
+    cursor: str | None = None,
+    channel: str | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    page = await load_feed(session, channel=channel or None, cursor=cursor, limit=6)
+    return TEMPLATES.TemplateResponse(
+        request,
+        "partials/feed_more.html",
+        {
+            "cards": page["items"],
+            "next_cursor": page["next_cursor"],
+            "feed_channel": channel or "",
+        },
+    )
 
 
 @router.get("/partials/channel-counts")

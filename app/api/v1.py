@@ -26,6 +26,7 @@ from app.errors import ApiError
 from app.models import Media, Note, ReviewTicket, Subject, Tag, User
 from app.schemas import DecideIn, LoginIn, NoteWriteIn
 from app.services.storage import preview_url_for, read_upload, store_image
+from app.services.feed import load_feed
 from app.services.topics import notes_for_subject, public_subject
 
 router = APIRouter()
@@ -333,6 +334,16 @@ async def decide_ticket(
     if ticket is None:
         raise ApiError(404, "NOT_FOUND", "审核工单不存在")
     raise ApiError(422, "UNPROCESSABLE", "审核决定将在后续天数开放")
+
+
+@router.get("/feed", tags=["feed"])
+async def feed(
+    channel: str | None = None,
+    cursor: str | None = None,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    page = await load_feed(session, channel=channel, cursor=cursor, limit=6)
+    return jsonable_encoder({"items": page["items"], "nextCursor": page["next_cursor"]})
 
 
 @router.get("/search", tags=["search"])
