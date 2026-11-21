@@ -80,15 +80,7 @@ API_PATHS = {
     "/api/v1/search/parse",
     "/api/v1/publish/suggest",
 }
-PUBLIC_PAGES = ["/", "/c/landscape", "/c/portrait", "/search", "/login", "/s/huangshan", "/s/window-portrait", "/n/demo"]
-
-
-@pytest.fixture
-async def client(engine: AsyncEngine) -> AsyncClient:
-    del engine
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as http:
-        yield http
+PUBLIC_PAGES = ["/", "/c/landscape", "/c/portrait", "/search", "/login", "/s/huangshan", "/s/window-portrait"]
 
 
 def test_note_field_keys_match_spec():

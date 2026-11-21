@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import func, select
@@ -13,6 +15,7 @@ from app.db import get_session
 from app.errors import ApiError
 from app.models import Subject, User
 from app.services.storage import resolve_storage_path
+from app.services.topics import approved_note_and_subject, public_subject, topic_context
 from app.web.templating import TEMPLATES
 from fastapi_users.authentication.strategy.db import DatabaseStrategy
 
@@ -71,18 +74,43 @@ async def channel_page(channel: str, request: Request, user: User | None = Depen
     return render(request, "channel.html", user, active=channel, channel=spec)
 
 
+def _parse_uuid(value: str) -> UUID:
+    try:
+        return UUID(value)
+    except ValueError as exc:
+        raise ApiError(404, "NOT_FOUND", "笔记不存在或尚未公开") from exc
+
+
 @router.get("/s/{slug}")
 async def subject_page(
     slug: str,
     request: Request,
+    work: str | None = None,
     user: User | None = Depends(get_optional_user),
     session: AsyncSession = Depends(get_session),
 ):
-    result = await session.execute(select(Subject).where(Subject.slug == slug))
-    subject = result.scalar_one_or_none()
-    if subject is None or subject.slug == UNSORTED_SLUG:
+    subject = await public_subject(session, slug)
+    if subject is None:
         raise ApiError(404, "NOT_FOUND", "对象不存在")
+    highlight = None
+    if work:
+        found = await approved_note_and_subject(session, _parse_uuid(work))
+        if found is None:
+            raise ApiError(404, "NOT_FOUND", "笔记不存在或尚未公开")
+        note, owner = found
+        if owner.slug != subject.slug:
+            return RedirectResponse(f"/s/{owner.slug}?work={note.id}", status_code=302)
+        highlight_id = note.id
+    else:
+        highlight_id = None
     channel = CHANNEL_BY_CODE.get(subject.primary_channel)
+    context = await topic_context(session, subject)
+    if highlight_id is not None:
+        for section in context["sections"]:
+            for item in section["notes"]:
+                if item["id"] == highlight_id:
+                    highlight = item
+                    break
     return render(
         request,
         "subject.html",
@@ -92,12 +120,24 @@ async def subject_page(
         channel_name=channel["name"] if channel else subject.primary_channel,
         type_name=SUBJECT_TYPE_NAMES.get(subject.type, subject.type),
         axes="、".join(subject.condition_axes or []),
+        highlight=highlight,
+        **context,
     )
 
 
+@router.get("/w/{work_id}")
+async def work_redirect(work_id: str, session: AsyncSession = Depends(get_session)):
+    found = await approved_note_and_subject(session, _parse_uuid(work_id))
+    if found is None:
+        raise ApiError(404, "NOT_FOUND", "笔记不存在或尚未公开")
+    note, owner = found
+    return RedirectResponse(f"/s/{owner.slug}?work={note.id}", status_code=302)
+
+
 @router.get("/n/{note_id}")
-async def note_page(note_id: str, request: Request, user: User | None = Depends(get_optional_user)):
-    return render(request, "note.html", user, note_id=note_id)
+async def note_page(note_id: str, session: AsyncSession = Depends(get_session)):
+    """旧的笔记地址。作品不再单独开页，转到题材页并高亮。"""
+    return await work_redirect(note_id, session)
 
 
 @router.get("/publish")
