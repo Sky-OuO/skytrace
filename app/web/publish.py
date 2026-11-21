@@ -88,7 +88,10 @@ async def render_publish(
         subject_for_tags = subject
     else:
         subject_for_tags = subject if subject is not None and subject.slug != "" else None
-    topics = await find_topics(session, "", selected=subject_slug or None)
+    if subject is not None and subject.slug != UNSORTED_SLUG:
+        topics = [subject]
+    else:
+        topics = []
     examples = await _examples(session, subject.id) if subject is not None and subject.slug != UNSORTED_SLUG else []
     needs_auth = True
     if subject is not None and subject.slug != UNSORTED_SLUG:
