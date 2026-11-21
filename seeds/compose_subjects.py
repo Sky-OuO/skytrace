@@ -380,6 +380,8 @@ def landscape_subject(row: tuple) -> dict:
     aliases = [hook]
     if spots[0] not in aliases:
         aliases.append(spots[0])
+    if slug == "huangshan":
+        aliases.append("黄山云海")
     return {
         "slug": slug,
         "name": name,

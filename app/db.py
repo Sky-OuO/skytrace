@@ -1,3 +1,4 @@
+import json
 from collections.abc import AsyncIterator
 
 from fastapi import Request
@@ -8,10 +9,19 @@ from sqlmodel import SQLModel
 from app.config import get_settings
 
 
+def _json_dumps(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
 def make_engine(url: str | None = None) -> AsyncEngine:
     database_url = url or get_settings().database_url
     if database_url.startswith("sqlite"):
-        engine = create_async_engine(database_url, connect_args={"check_same_thread": False})
+        engine = create_async_engine(
+            database_url,
+            connect_args={"check_same_thread": False},
+            json_serializer=_json_dumps,
+            json_deserializer=json.loads,
+        )
 
         @event.listens_for(engine.sync_engine, "connect")
         def _enable_sqlite_foreign_keys(dbapi_connection, _connection_record) -> None:

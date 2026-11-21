@@ -27,10 +27,12 @@ from app.models import Media, Note, Subject, Tag, User
 from app.schemas import DecideIn, LoginIn, NoteWriteIn
 from app.services.storage import preview_url_for, read_upload, store_image
 from app.services.feed import load_feed
+from app.services.publishing import find_topics
 from app.services.publishing import create_note as create_note_row
 from app.services.publishing import decide_ticket as decide_ticket_row
 from app.services.publishing import my_notes as list_my_notes
 from app.services.publishing import note_payload, pending_tickets, submit_note as submit_note_row, update_note as update_note_row
+from app.services.search import parse_query, search_all
 from app.services.topics import notes_for_subject, public_subject
 
 router = APIRouter()
@@ -370,18 +372,37 @@ async def feed(
 @router.get("/search", tags=["search"])
 async def search(
     q: str | None = None,
-    page: PageQuery = Depends(),
+    session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    del q
-    return envelope([], 0, page)
+    return jsonable_encoder(await search_all(session, q or ""))
 
 
 @router.post("/search/parse", tags=["search"])
-async def parse_search() -> dict[str, Any]:
-    raise ApiError(422, "UNPROCESSABLE", "搜索解析将在后续天数开放")
+async def parse_search(body: dict[str, Any] = Body(default={})) -> dict[str, Any]:
+    text = body.get("q") if isinstance(body, dict) else ""
+    if not isinstance(text, str) or not text.strip():
+        raise ApiError(422, "UNPROCESSABLE", "请提供要解析的搜索词")
+    return parse_query(text)
 
 
 @router.post("/publish/suggest", tags=["publish"])
-async def suggest_publish(user: User = Depends(require_user)) -> dict[str, Any]:
+async def suggest_publish(
+    body: dict[str, Any] = Body(default={}),
+    user: User = Depends(require_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
     del user
-    raise ApiError(422, "UNPROCESSABLE", "发布助手将在后续天数开放")
+    text = " ".join(str(body.get(key) or "") for key in ("title", "text", "body", "q"))
+    topics = await find_topics(session, text, limit=3)
+    note_type = "finished"
+    if any(word in text for word in ("灯光", "用光", "窗光", "主光")):
+        note_type = "lighting"
+    elif any(word in text for word in ("姿势", "侧坐", "身体")):
+        note_type = "posing"
+    elif any(word in text for word in ("后期", "白平衡")):
+        note_type = "post"
+    return {
+        "topics": [{"slug": topic.slug, "name": topic.name} for topic in topics],
+        "type": note_type,
+        "note": "规则建议，只推荐题材和类型，不代写正文。",
+    }

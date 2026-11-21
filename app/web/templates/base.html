@@ -55,6 +55,8 @@
     .filter-links { display: flex; gap: 12px; margin-top: 8px; }
     .filter-links a[aria-current="page"] { color: #8f3d2a; }
     .feed-sentinel { column-span: all; height: 8px; }
+    .topic-strip { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+    .topic-strip a { background: #fff; border: 1px solid #e4ddd2; padding: 4px 8px; font-size: 13px; }
     .publish-form, .review-card { max-width: 40rem; }
     .publish-form input, .publish-form textarea, .publish-form select, .review-card input, .review-card select { width: 100%; border: 1px solid #c4bdb2; background: #fff; padding: 8px; margin-top: 4px; }
     .publish-form label, .review-card label { display: block; margin-top: 14px; font-size: 14px; }
@@ -84,8 +86,8 @@
       </a>
       <nav aria-label="主导航" class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <a href="/" class="{% if active == 'home' %}font-medium text-stamp{% endif %}">首页</a>
-        <a href="/c/portrait" class="{% if active == 'portrait' %}font-medium text-stamp{% endif %}">人像</a>
-        <a href="/c/landscape" class="{% if active == 'landscape' %}font-medium text-stamp{% endif %}">风光</a>
+        <a href="/portrait" class="{% if active == 'portrait' %}font-medium text-stamp{% endif %}">人像</a>
+        <a href="/landscape" class="{% if active == 'landscape' %}font-medium text-stamp{% endif %}">风光</a>
         <a href="/search" class="{% if active == 'search' %}font-medium text-stamp{% endif %}">搜索</a>
         <a href="/publish" class="{% if active == 'publish' %}font-medium text-stamp{% endif %}">记一笔</a>
         {% if current_user %}

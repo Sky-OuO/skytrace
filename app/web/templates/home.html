@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% block title %}SkyTrace · 摄影题材{% endblock %}
 {% block content %}
+  {% if topics %}
+    <details class="filter-fold">
+      <summary>{{ channel_title }}题材 · {{ topics|length }}</summary>
+      <p class="topic-strip">
+        {% for topic in topics %}
+          <a href="/s/{{ topic.slug }}">{{ topic.name }}</a>
+        {% endfor %}
+      </p>
+    </details>
+  {% endif %}
   <details class="filter-fold">
     <summary>筛选</summary>
     <p class="filter-links">

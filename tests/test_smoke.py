@@ -290,8 +290,8 @@ async def test_stub_write_routes_use_agreed_errors(client: AsyncClient):
     assert (await client.post("/api/v1/notes", json={"title": "x"})).status_code == 401
     assert (await client.get("/api/v1/search")).json()["items"] == []
     parsed = await client.post("/api/v1/search/parse", json={"q": "黄昏的西湖"})
-    assert parsed.status_code == 422
-    assert parsed.json()["error"]["code"] == "UNPROCESSABLE"
+    assert parsed.status_code == 200
+    assert parsed.json()["channel"] == "landscape"
     assert (await client.post("/api/v1/publish/suggest", json={})).status_code == 401
     assert (await client.get("/api/v1/me/notes")).status_code == 401
     assert (await client.get("/api/v1/review/tickets")).status_code == 401
@@ -302,8 +302,9 @@ async def test_stub_write_routes_use_agreed_errors(client: AsyncClient):
     assert "未选对象" in missing_subject.json()["error"]["message"]
     absent = await client.post("/api/v1/notes", json={"subject_id": "00000000-0000-0000-0000-000000000000"})
     assert absent.status_code == 404
-    suggest = await client.post("/api/v1/publish/suggest", json={"title": "x"})
-    assert suggest.status_code == 422
+    suggest = await client.post("/api/v1/publish/suggest", json={"title": "窗边人像 用光"})
+    assert suggest.status_code == 200
+    assert suggest.json()["type"] == "lighting"
     assert (await client.get("/api/v1/review/tickets")).status_code == 403
     missing_note = await client.get("/api/v1/notes/00000000-0000-0000-0000-000000000000")
     assert missing_note.status_code == 404

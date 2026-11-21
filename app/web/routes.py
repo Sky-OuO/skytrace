@@ -114,6 +114,34 @@ async def find_topics_for_review(session: AsyncSession):
     return await find_topics(session, "", limit=50)
 
 
+async def _channel_feed(request: Request, user: User | None, session: AsyncSession, code: str):
+    from sqlalchemy import select
+
+    from app.models import Subject
+
+    page = await load_feed(session, channel=code, limit=6)
+    topics = list(
+        (
+            await session.execute(
+                select(Subject)
+                .where(Subject.primary_channel == code, Subject.slug != UNSORTED_SLUG)
+                .order_by(Subject.name)
+            )
+        ).scalars()
+    )
+    return render(
+        request,
+        "home.html",
+        user,
+        active=code,
+        cards=page["items"],
+        next_cursor=page["next_cursor"],
+        feed_channel=code,
+        topics=topics,
+        channel_title="人像" if code == "portrait" else "风光",
+    )
+
+
 def _parse_uuid(value: str) -> UUID:
     try:
         return UUID(value)
@@ -240,8 +268,42 @@ async def my_page(
 
 
 @router.get("/search")
-async def search(request: Request, q: str | None = None, user: User | None = Depends(get_optional_user)):
-    return render(request, "search.html", user, active="search", q=q or "")
+async def search_page(
+    request: Request,
+    q: str | None = None,
+    user: User | None = Depends(get_optional_user),
+    session: AsyncSession = Depends(get_session),
+):
+    from app.services.search import search_all
+
+    result = await search_all(session, q or "")
+    return render(
+        request,
+        "search.html",
+        user,
+        active="search",
+        q=q or "",
+        topics=result["topics"],
+        works=result["works"],
+    )
+
+
+@router.get("/portrait")
+async def portrait_channel(
+    request: Request,
+    user: User | None = Depends(get_optional_user),
+    session: AsyncSession = Depends(get_session),
+):
+    return await _channel_feed(request, user, session, "portrait")
+
+
+@router.get("/landscape")
+async def landscape_channel(
+    request: Request,
+    user: User | None = Depends(get_optional_user),
+    session: AsyncSession = Depends(get_session),
+):
+    return await _channel_feed(request, user, session, "landscape")
 
 
 @router.get("/review")
