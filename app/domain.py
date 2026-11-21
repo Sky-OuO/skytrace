@@ -3,10 +3,10 @@
 第 1–2 天只把字段和允许的状态迁移定下来。提交校验、审核台和公开发布流程后面再做。
 """
 
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 NOTE_TYPES = ("finished", "spot", "pre", "post", "lighting", "posing")
 NOTE_TYPE_NAMES = {
@@ -108,3 +108,87 @@ NOTE_FIELD_MODELS: dict[str, type[_Fields]] = {
 def note_field_keys(note_type: str) -> set[str]:
     model = NOTE_FIELD_MODELS[note_type]
     return set(model.model_fields)
+
+
+# 题材页六个固定区块。guide 的键、笔记 type、界面标题。
+TOPIC_SECTIONS: tuple[tuple[str, str, str], ...] = (
+    ("finished_points", "finished", "成片"),
+    ("scouting", "spot", "踩点"),
+    ("pre", "pre", "前期"),
+    ("post", "post", "后期"),
+    ("lighting", "lighting", "用光"),
+    ("posing", "posing", "姿势"),
+)
+
+GUIDE_KEYS: tuple[str, ...] = tuple(item[0] for item in TOPIC_SECTIONS)
+UNSORTED_SLUG = "unsorted"
+
+
+class SubjectGuide(BaseModel):
+    """编辑种子的六段要点。每段 2–4 条短句，不能用空话填。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    finished_points: list[str] = Field(min_length=2, max_length=4)
+    scouting: list[str] = Field(min_length=2, max_length=4)
+    pre: list[str] = Field(min_length=2, max_length=4)
+    post: list[str] = Field(min_length=2, max_length=4)
+    lighting: list[str] = Field(min_length=2, max_length=4)
+    posing: list[str] = Field(min_length=2, max_length=4)
+
+    @field_validator("finished_points", "scouting", "pre", "post", "lighting", "posing")
+    @classmethod
+    def short_lines(cls, value: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        for item in value:
+            text = str(item).strip()
+            if not text:
+                raise ValueError("要点不能是空行")
+            if "私房" in text:
+                raise ValueError("公开文案不能出现禁用词")
+            cleaned.append(text)
+        return cleaned
+
+
+class SubjectExampleSeed(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=80)
+    geo_text: str | None = None
+    note: str | None = None
+    verify_status: Literal["verified", "pending"] = "pending"
+
+    @field_validator("name", "geo_text", "note")
+    @classmethod
+    def no_forbidden(cls, value: str | None) -> str | None:
+        if value and "私房" in value:
+            raise ValueError("公开文案不能出现禁用词")
+        return value.strip() if isinstance(value, str) else value
+
+
+class SubjectSeed(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    slug: str = Field(min_length=1, max_length=160)
+    name: str = Field(min_length=1, max_length=200)
+    channel: Literal["portrait", "landscape"]
+    tagline: str = Field(min_length=1, max_length=200)
+    aliases: list[str] = Field(default_factory=list)
+    guide: SubjectGuide
+    examples: list[SubjectExampleSeed] = Field(default_factory=list)
+    geo_text: str | None = None
+    safety_notes: str | None = None
+    condition_axes: list[str] = Field(default_factory=list)
+    type: Literal["location", "scene", "theme"] | None = None
+
+    @field_validator("tagline", "name", "geo_text", "safety_notes")
+    @classmethod
+    def no_forbidden_text(cls, value: str | None) -> str | None:
+        if value and "私房" in value:
+            raise ValueError("公开文案不能出现禁用词")
+        return value.strip() if isinstance(value, str) else value
+
+    def resolved_type(self) -> str:
+        if self.type:
+            return self.type
+        return "scene" if self.channel == "portrait" else "location"

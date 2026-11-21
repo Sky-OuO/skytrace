@@ -21,7 +21,7 @@ from app.auth.manager import UserManager
 from app.catalog import CHANNELS, CHANNEL_CODES, FACET_NAMES, FACETS
 from app.config import get_settings
 from app.db import get_session
-from app.domain import can_transition, note_requires_portrait_auth
+from app.domain import UNSORTED_SLUG, can_transition, note_requires_portrait_auth
 from app.errors import ApiError
 from app.models import Media, Note, ReviewTicket, Subject, Tag, User
 from app.schemas import DecideIn, LoginIn, NoteWriteIn
@@ -59,6 +59,9 @@ def subject_payload(subject: Subject) -> dict[str, Any]:
         "condition_axes": list(subject.condition_axes or []),
         "geo_text": subject.geo_text,
         "safety_notes": subject.safety_notes,
+        "tagline": subject.tagline,
+        "aliases": list(subject.aliases or []),
+        "guide": subject.guide,
         "guide_summary": subject.guide_summary,
         "cover_media_id": subject.cover_media_id,
         "created_at": subject.created_at,
@@ -121,7 +124,11 @@ async def channels(
     page: PageQuery = Depends(),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    result = await session.execute(select(Subject.primary_channel, func.count()).group_by(Subject.primary_channel))
+    result = await session.execute(
+        select(Subject.primary_channel, func.count())
+        .where(Subject.slug != UNSORTED_SLUG)
+        .group_by(Subject.primary_channel)
+    )
     counts = {code: count for code, count in result.all()}
     items = [
         {"code": channel["code"], "name": channel["name"], "subject_count": int(counts.get(channel["code"], 0))}
@@ -139,8 +146,8 @@ async def list_subjects(
 ) -> dict[str, Any]:
     if channel is not None and channel not in CHANNEL_CODES:
         raise ApiError(400, "VALIDATION_ERROR", "未知频道")
-    count_stmt = select(func.count()).select_from(Subject)
-    list_stmt = select(Subject).order_by(Subject.slug)
+    count_stmt = select(func.count()).select_from(Subject).where(Subject.slug != UNSORTED_SLUG)
+    list_stmt = select(Subject).where(Subject.slug != UNSORTED_SLUG).order_by(Subject.slug)
     if channel is not None:
         count_stmt = count_stmt.where(Subject.primary_channel == channel)
         list_stmt = list_stmt.where(Subject.primary_channel == channel)
@@ -155,7 +162,7 @@ async def list_subjects(
 async def get_subject(slug: str, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
     result = await session.execute(select(Subject).where(Subject.slug == slug))
     subject = result.scalar_one_or_none()
-    if subject is None:
+    if subject is None or subject.slug == UNSORTED_SLUG:
         raise ApiError(404, "NOT_FOUND", "对象不存在")
     return jsonable_encoder(subject_payload(subject))
 

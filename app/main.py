@@ -10,7 +10,7 @@ from app import __version__
 from app.api.v1 import router as api_router
 from app.auth.oauth import reserved_oauth_note
 from app.config import get_settings
-from app.db import make_engine, make_session_factory
+from app.db import ensure_schema, make_engine, make_session_factory
 from app.errors import ApiError, error_body
 from app.web.routes import router as web_router
 from app.web.templating import TEMPLATES
@@ -64,6 +64,7 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     Path(settings.media_root).mkdir(parents=True, exist_ok=True)
     engine = make_engine(settings.database_url)
+    await ensure_schema(engine)
     app.state.engine = engine
     app.state.session_factory = make_session_factory(engine)
     app.state.oauth_reservation = reserved_oauth_note()

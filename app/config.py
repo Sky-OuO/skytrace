@@ -12,7 +12,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str = "postgresql+asyncpg://skytrace:skytrace@localhost:5432/skytrace"
+    database_url: str = "sqlite+aiosqlite:///var/skytrace.db"
     redis_url: str = "redis://localhost:6379/0"
     secret_key: str = "change-me-in-local-env"
     media_root: str = "var/media"

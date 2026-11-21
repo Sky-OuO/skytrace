@@ -12,7 +12,10 @@
 - 对外角色只有 `author` 和 `reviewer`。审核员可以给自己写笔记，但不能改别人的稿。作者不能进审核台。
 - FastAPI-Users 额外使用 `is_active`、`is_superuser`、`is_verified`。密码在库里的列名是 `password_hash`；ORM 属性仍叫 `hashed_password`，这是库的字段名。
 - `access_tokens` 不是业务表。会话 Cookie 里只放不透明 token，登录态记在这张表。
-- 公开词表不含「私房」，也不设性化一级标签。`theme` 类型保留，是为了和方案对齐；两周的 10 个种子用不到。
+- 公开词表不含「私房」，也不设性化一级标签。`theme` 类型保留。公开频道只有 `portrait` 和 `landscape`。
+- 2026-11-21 起，题材就是 `subjects`。新增 `tagline`、`aliases`（JSON 数组）、`guide`（JSON，六个键：`finished_points`、`scouting`、`pre`、`post`、`lighting`、`posing`，每键 2–4 条）。地点示例在 `subject_examples`，不是独立题材。`notes.example_id` 可空，指向某条示例。`notes.subject_id` 仍然非空。
+- 隐藏题材 slug 为 `unsorted`（待归类）。它不出现在信息流、频道和搜索里，只在审核台可见。审核员必须先改挂到真实题材才能通过。
+- 本地演示默认 SQLite，表由模型创建。PostgreSQL 仍用 Alembic，`0002_topics` 在 `0001_initial` 之上加这些列。SQLite 没有 `tsvector` 触发器，搜索用 `LIKE`。
 
 ## 笔记状态机
 
@@ -64,12 +67,15 @@ rejected --再提交--> pending_review
 | slug | varchar(160) | 唯一，`uq_subjects_slug` |
 | name | varchar(200) | |
 | type | varchar(32) | `location`、`scene`、`theme` |
-| primary_channel | varchar(32) | `landscape`、`culture`、`portrait` |
+| primary_channel | varchar(32) | `landscape`、`portrait`。`culture` 已从公开范围移除 |
 | condition_axes | jsonb | 本页要突出的条件面，字符串数组，默认 `[]` |
 | geo_text | text | 可空 |
 | safety_notes | text | 可空 |
 | cover_media_id | uuid | 可空，外键 `media.id`，媒体删除时置空 |
-| guide_summary | text | 可空。第 3–5 天再填静态摘要 |
+| guide_summary | text | 可空。早期静态摘要，新种子改用 `guide` |
+| tagline | text | 可空。题材一句话 |
+| aliases | jsonb / json | 别名数组，默认 `[]` |
+| guide | jsonb / json | 可空。六段编辑要点。`unsorted` 为空 |
 | created_by | uuid | 可空，外键 `users.id`，用户删除时置空 |
 | created_at | timestamptz | |
 | search_vector | tsvector | 触发器维护，不由应用写入 |
@@ -82,7 +88,8 @@ rejected --再提交--> pending_review
 |---|---|---|
 | id | uuid | 主键 |
 | author_id | uuid | 外键 `users.id`，限制删除 |
-| subject_id | uuid | 外键 `subjects.id`，限制删除。一篇笔记至少一个对象 |
+| subject_id | uuid | 外键 `subjects.id`，限制删除。一篇笔记至少一个对象，待归类挂 `unsorted` |
+| example_id | uuid | 可空，外键 `subject_examples.id`，示例删除时置空 |
 | type | varchar(32) | 见下方类型 |
 | title | varchar(300) | |
 | body | text | 默认空字符串。成片的简短拍摄说明放这里 |
@@ -200,9 +207,25 @@ rejected --再提交--> pending_review
 
 函数名以 `skytrace_` 开头，降级迁移时会删掉。
 
+## subject_examples
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| id | uuid | 主键 |
+| subject_id | uuid | 外键 `subjects.id` |
+| name | varchar(80) | 示例名，如咖啡馆窗边、西餐厅靠窗、火车窗边、光明顶 |
+| geo_text | text | 可空。非地理场景不写地址 |
+| note | text | 可空。这个例子和题材的关系 |
+| sort_order | integer | 同页排序 |
+| verify_status | varchar(32) | `verified` 或 `pending`。票价、季节窗口、具体时刻未核实的标 `pending` |
+
+咖啡馆窗边、西餐厅靠窗、火车窗边是「窗边人像」的示例行，不是 `subjects`。
+
 ## 种子对象
 
-人文频道没有种子。名称必须是「咖啡馆窗边」和「窗光棚」。
+现行清单是 `seeds/subjects.json`，由 `python -m app.seed --subjects seeds/subjects.json` 按 slug 更新。`--prune` 会删掉不在 JSON 里、且没有笔记的旧题材（不删 `unsorted`）。下面这张表是第 1–2 天的 stub，已被种子文件替换。名称现在是「窗边人像」和「窗光棚」。人文不再作为公开频道。
+
+历史 stub（不要再当现行数据）：
 
 | 名称 | slug | type | primary_channel | condition_axes |
 |---|---|---|---|---|

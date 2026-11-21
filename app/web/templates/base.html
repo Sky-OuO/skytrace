@@ -35,15 +35,14 @@
     <div class="mx-auto flex max-w-5xl flex-wrap items-end justify-between gap-x-8 gap-y-4 px-4 py-5 sm:px-6">
       <a href="/" class="block">
         <span class="font-serif text-2xl tracking-wide">SkyTrace</span>
-        <span class="mt-1 block text-xs tracking-[0.18em] text-stone-500">摄影对象知识库</span>
+        <span class="mt-1 block text-xs tracking-[0.18em] text-stone-500">摄影题材怎么拍</span>
       </a>
       <nav aria-label="主导航" class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <a href="/" class="{% if active == 'home' %}font-medium text-stamp{% endif %}">首页</a>
-        <a href="/c/landscape" class="{% if active == 'landscape' %}font-medium text-stamp{% endif %}">风光</a>
-        <a href="/c/culture" class="{% if active == 'culture' %}font-medium text-stamp{% endif %}">人文</a>
         <a href="/c/portrait" class="{% if active == 'portrait' %}font-medium text-stamp{% endif %}">人像</a>
+        <a href="/c/landscape" class="{% if active == 'landscape' %}font-medium text-stamp{% endif %}">风光</a>
         <a href="/search" class="{% if active == 'search' %}font-medium text-stamp{% endif %}">搜索</a>
-        <a href="/ideas" class="{% if active == 'ideas' %}font-medium text-stamp{% endif %}">思想开源<span class="ml-1 align-middle text-[10px] tracking-wide text-stone-500">后置</span></a>
+        <a href="/publish" class="{% if active == 'publish' %}font-medium text-stamp{% endif %}">记一笔</a>
         {% if current_user %}
           <span class="text-stone-600">{{ current_user.display_name }}</span>
           <form method="post" action="/logout" class="inline">
@@ -59,7 +58,7 @@
     {% block content %}{% endblock %}
   </main>
   <footer class="border-t border-stone-300">
-    <p class="mx-auto max-w-5xl px-4 py-6 text-xs text-stone-500 sm:px-6">对象页和结构化笔记是主线。这是本地原型，不开放注册。</p>
+    <p class="mx-auto max-w-5xl px-4 py-6 text-xs text-stone-500 sm:px-6">按题材把成片和拍法放在同一页。本地演示，不开放注册。图片如无另注，都是示例图。</p>
   </footer>
 </body>
 </html>
