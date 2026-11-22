@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% block title %}{{ subject.name }} · SkyTrace{% endblock %}
 {% block content %}
-  <p class="text-xs tracking-[0.18em] text-stone-500">{{ channel_name }} · {{ type_name }}</p>
-  <h1 class="mt-2 font-serif text-4xl leading-tight">{{ subject.name }}</h1>
+  <p class="kicker">{{ channel_name }} · {{ type_name }}</p>
+  <h1 class="page-title">{{ subject.name }}</h1>
   {% if subject.tagline %}
-    <p class="mt-3 max-w-2xl text-base leading-7">{{ subject.tagline }}</p>
+    <p class="lede">{{ subject.tagline }}</p>
   {% endif %}
   {% if axes %}
-    <p class="mt-3 text-sm text-stone-600">条件：{{ axes }}</p>
+    <p class="quiet">条件：{{ axes }}</p>
   {% endif %}
   {% if subject.safety_notes %}
-    <p class="mt-4 max-w-2xl border-l-2 border-stamp pl-3 text-sm leading-6 text-stone-700">{{ subject.safety_notes }}</p>
+    <p class="quiet">{{ subject.safety_notes }}</p>
   {% endif %}
 
   <nav class="section-nav" aria-label="题材段落">
@@ -22,26 +22,36 @@
 
   {% if highlight %}
     <article class="highlight-card" id="reading">
-      <p class="text-xs tracking-[0.16em] text-stamp">正在看这一张</p>
+      <div class="pad">
+        <p class="kicker">正在看这一张</p>
+      </div>
       {% if highlight.media %}
-        <img src="{{ highlight.media[0].preview_url }}" alt="{{ highlight.media[0].alt or highlight.title }}" width="{{ highlight.media[0].width or 800 }}" height="{{ highlight.media[0].height or 600 }}">
-        <p class="sample-flag">示例图</p>
+        <span class="frame" style="aspect-ratio: {{ highlight.media[0].width or 3 }} / {{ highlight.media[0].height or 4 }};">
+          <img
+            src="{{ highlight.media[0].preview_url }}"
+            alt="{{ highlight.media[0].alt or highlight.title }}"
+            width="{{ highlight.media[0].width or 800 }}"
+            height="{{ highlight.media[0].height or 600 }}"
+            data-shot="{{ highlight.id }}"
+            style="view-transition-name: shot-{{ highlight.id }}"
+          >
+        </span>
+        <p class="sample-flag pad">示例图</p>
       {% endif %}
-      <h2 class="mt-3 font-serif text-2xl">{{ highlight.title }}</h2>
-      {% if highlight.body %}
-        <p class="mt-2 text-sm leading-6">{{ highlight.body }}</p>
-      {% endif %}
-      <p class="mt-2 text-xs text-stone-500">
-        {{ highlight.type_name }}
-        {% if highlight.author %} · {{ highlight.author.display_name }}{% endif %}
-        · 下面是「{{ subject.name }}」的完整拍法
-      </p>
+      <div class="pad">
+        <h2 class="block-title">{{ highlight.title }}</h2>
+        {% if highlight.body %}<p>{{ highlight.body }}</p>{% endif %}
+        <p class="meta">
+          {{ highlight.type_name }}
+          {% if highlight.author %} · {{ highlight.author.display_name }}{% endif %}
+        </p>
+      </div>
     </article>
   {% endif %}
 
   {% for section in sections %}
     <section id="{{ section.anchor }}" class="topic-section" aria-labelledby="h-{{ section.anchor }}">
-      <h2 id="h-{{ section.anchor }}" class="font-serif text-2xl">{{ section.title }}</h2>
+      <h2 id="h-{{ section.anchor }}">{{ section.title }}</h2>
       {% if section.lines %}
         <ul class="guide-list">
           {% for line in section.lines %}
@@ -51,38 +61,44 @@
       {% endif %}
       {% if section.anchor == "spot" and examples %}
         <details class="example-fold">
-          <summary>地点例子 · {{ examples|length }} 个，默认收起</summary>
-          <ul>
-            {% for example in examples %}
-              <li>
-                <strong>{{ example.name }}</strong>
-                <span class="verify">{{ example.verify_label }}</span>
-                {% if example.note %}<p>{{ example.note }}</p>{% endif %}
-                {% if example.geo_text %}<p class="geo">{{ example.geo_text }}</p>{% endif %}
-              </li>
-            {% endfor %}
-          </ul>
+          <summary>地点例子 · {{ examples|length }}</summary>
+          <div class="fold">
+            <div>
+              <ul>
+                {% for example in examples %}
+                  <li>
+                    <strong>{{ example.name }}</strong>
+                    <span class="tag">{{ example.verify_label }}</span>
+                    {% if example.note %}<p>{{ example.note }}</p>{% endif %}
+                    {% if example.geo_text %}<p class="geo">{{ example.geo_text }}</p>{% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
         </details>
       {% endif %}
       {% for note in section.notes %}
         <article id="work-{{ note.id }}" class="note-card{% if highlight and highlight.id == note.id %} work-on{% endif %}">
           {% if note.media %}
-            <img src="{{ note.media[0].preview_url }}" alt="{{ note.media[0].alt or note.title }}" width="{{ note.media[0].width or 800 }}" height="{{ note.media[0].height or 600 }}">
-            <p class="sample-flag">示例图</p>
+            <span class="frame" style="aspect-ratio: {{ note.media[0].width or 3 }} / {{ note.media[0].height or 4 }};">
+              <img src="{{ note.media[0].preview_url }}" alt="{{ note.media[0].alt or note.title }}" width="{{ note.media[0].width or 800 }}" height="{{ note.media[0].height or 600 }}" loading="lazy" decoding="async" data-shot="{{ note.id }}">
+            </span>
+            <p class="sample-flag pad">示例图</p>
           {% endif %}
-          <h3 class="font-serif text-xl">{{ note.title }}</h3>
-          {% if note.body %}<p>{{ note.body }}</p>{% endif %}
-          {% if note.field_rows %}
-            <dl>
-              {% for row in note.field_rows %}
-                <dt>{{ row.label }}</dt>
-                <dd>{{ row.value }}</dd>
-              {% endfor %}
-            </dl>
-          {% endif %}
-          <p class="byline">
-            {% if note.author %}{{ note.author.display_name }}{% endif %}
-          </p>
+          <div class="pad">
+            <h3 class="block-title">{{ note.title }}</h3>
+            {% if note.body %}<p>{{ note.body }}</p>{% endif %}
+            {% if note.field_rows %}
+              <dl>
+                {% for row in note.field_rows %}
+                  <dt>{{ row.label }}</dt>
+                  <dd>{{ row.value }}</dd>
+                {% endfor %}
+              </dl>
+            {% endif %}
+            <p class="byline">{% if note.author %}{{ note.author.display_name }}{% endif %}</p>
+          </div>
         </article>
       {% endfor %}
       {% if section.empty %}

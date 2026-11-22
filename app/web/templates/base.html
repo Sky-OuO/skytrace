@@ -4,111 +4,45 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#f7f5f2">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23141414'/%3E%3C/svg%3E">
   <title>{% block title %}SkyTrace{% endblock %}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/site.css">
+  <script>document.documentElement.classList.add("js")</script>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            paper: "#f3efe7",
-            ink: "#221c16",
-            stamp: "#8f3d2a"
-          },
-          fontFamily: {
-            sans: ['"Noto Sans SC"', '"Source Han Sans SC"', '"PingFang SC"', '"Microsoft YaHei"', '"Noto Sans CJK SC"', "sans-serif"],
-            serif: ['"Iowan Old Style"', "Palatino", '"Songti SC"', '"Noto Serif SC"', "serif"]
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    body { background: #f3efe7; color: #221c16; }
-    :focus-visible { outline: 2px solid #8f3d2a; outline-offset: 3px; }
-    .section-nav { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 0.4rem; background: rgba(243,239,231,0.95); padding: 0.75rem 0; }
-    .section-nav a { border: 1px solid #d6d0c6; border-radius: 999px; padding: 0.2rem 0.7rem; font-size: 0.85rem; background: white; }
-    .topic-section { margin-top: 2.5rem; scroll-margin-top: 3.5rem; }
-    .guide-list { margin-top: 0.8rem; display: grid; gap: 0.55rem; }
-    .guide-line { list-style: none; border-left: 2px solid #8f3d2a; padding-left: 0.75rem; line-height: 1.6; }
-    .example-fold { margin-top: 1rem; border: 1px dashed #c4bdb2; background: white; padding: 0.8rem 1rem; }
-    .example-fold summary { cursor: pointer; font-size: 0.9rem; }
-    .example-fold li { margin-top: 0.8rem; font-size: 0.92rem; line-height: 1.55; }
-    .verify { margin-left: 0.4rem; font-size: 0.75rem; color: #6b6258; }
-    .geo { color: #6b6258; font-size: 0.8rem; }
-    .note-card, .highlight-card { margin-top: 1rem; background: white; border: 1px solid #e4ddd2; padding: 0.9rem; }
-    .work-on, .highlight-card { outline: 2px solid #8f3d2a; }
-    .note-card img, .highlight-card img { width: 100%; height: auto; display: block; }
-    .highlight-card img { max-height: 360px; object-fit: cover; object-position: top; }
-    .sample-flag { margin-top: 0.35rem; font-size: 0.75rem; letter-spacing: 0.08em; color: #6b6258; }
-    .note-card dl { margin-top: 0.6rem; display: grid; grid-template-columns: 7rem 1fr; gap: 0.25rem 0.6rem; font-size: 0.9rem; }
-    .byline, .empty-note { margin-top: 0.6rem; font-size: 0.8rem; color: #6b6258; }
-    .masonry { columns: 2; column-gap: 12px; }
-    .card { break-inside: avoid; display: block; margin: 0 0 12px; background: #fff; color: inherit; text-decoration: none; border: 1px solid #e4ddd2; }
-    .card img { width: 100%; height: auto; display: block; }
-    .card-body { display: block; padding: 10px 12px 12px; }
-    .topic-chip { display: inline-block; color: #8f3d2a; font-size: 12px; letter-spacing: 0.04em; }
-    .card-title { display: block; margin-top: 4px; font-size: 16px; line-height: 1.4; }
-    .tip { display: block; margin-top: 6px; font-size: 14px; line-height: 1.5; }
-    .filter-fold { margin: 0 0 12px; font-size: 14px; }
-    .filter-fold summary { cursor: pointer; }
-    .filter-links { display: flex; gap: 12px; margin-top: 8px; }
-    .filter-links a[aria-current="page"] { color: #8f3d2a; }
-    .feed-sentinel { column-span: all; height: 8px; }
-    .topic-strip { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
-    .topic-strip a { background: #fff; border: 1px solid #e4ddd2; padding: 4px 8px; font-size: 13px; }
-    .publish-form, .review-card { max-width: 40rem; }
-    .publish-form input, .publish-form textarea, .publish-form select, .review-card input, .review-card select { width: 100%; border: 1px solid #c4bdb2; background: #fff; padding: 8px; margin-top: 4px; }
-    .publish-form label, .review-card label { display: block; margin-top: 14px; font-size: 14px; }
-    .choice { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; font-size: 14px; }
-    .choice input { width: auto; margin-top: 3px; }
-    .file-btn { display: inline-block; margin-top: 14px; border: 1px solid #221c16; padding: 8px 12px; cursor: pointer; }
-    .file-btn input { display: block; margin-top: 6px; }
-    .tag-set { margin-top: 16px; border: 0; padding: 0; }
-    .form-actions { display: flex; gap: 8px; }
-    button.primary, .form-actions button { background: #221c16; color: #f3efe7; padding: 8px 14px; margin-top: 16px; }
-    .form-actions button:last-child { background: transparent; color: #221c16; border: 1px solid #221c16; }
-    .form-error { margin-top: 12px; padding: 8px 10px; background: #fff; border-left: 3px solid #8f3d2a; }
-    .review-card { margin-top: 16px; background: #fff; border: 1px solid #e4ddd2; padding: 12px; }
-    .note-list { list-style: none; padding: 0; }
-    .note-list li { margin-top: 14px; background: #fff; border: 1px solid #e4ddd2; padding: 12px; }
-    .status-pill { display: inline-block; margin-left: 6px; border: 1px solid #8f3d2a; color: #8f3d2a; font-size: 12px; padding: 0 6px; }
-    @media (max-width: 640px) {
-      .note-card dl { grid-template-columns: 1fr; }
-    }
-  </style>
+  <script src="/static/site.js" defer></script>
 </head>
-<body class="min-h-screen bg-paper font-sans text-ink antialiased">
-  <a href="#content" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:bg-white focus:px-3 focus:py-2">跳到正文</a>
-  <header class="border-b border-stone-300">
-    <div class="mx-auto flex max-w-5xl flex-wrap items-end justify-between gap-x-8 gap-y-4 px-4 py-5 sm:px-6">
-      <a href="/" class="block">
-        <span class="font-serif text-2xl tracking-wide">SkyTrace</span>
-        <span class="mt-1 block text-xs tracking-[0.18em] text-stone-500">摄影题材怎么拍</span>
-      </a>
-      <nav aria-label="主导航" class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-        <a href="/" class="{% if active == 'home' %}font-medium text-stamp{% endif %}">首页</a>
-        <a href="/portrait" class="{% if active == 'portrait' %}font-medium text-stamp{% endif %}">人像</a>
-        <a href="/landscape" class="{% if active == 'landscape' %}font-medium text-stamp{% endif %}">风光</a>
-        <a href="/search" class="{% if active == 'search' %}font-medium text-stamp{% endif %}">搜索</a>
-        <a href="/publish" class="{% if active == 'publish' %}font-medium text-stamp{% endif %}">记一笔</a>
+<body hx-boost="true">
+  <a href="#content" class="sr-only">跳到正文</a>
+  <header class="topbar">
+    <div class="topbar-row">
+      <a class="brand" href="/">SkyTrace</a>
+      <nav class="nav" aria-label="主导航">
+        <a href="/" {% if active == 'home' %}aria-current="page"{% endif %}>首页</a>
+        <a href="/portrait" {% if active == 'portrait' %}aria-current="page"{% endif %}>人像</a>
+        <a href="/landscape" {% if active == 'landscape' %}aria-current="page"{% endif %}>风光</a>
+        <a href="/search" {% if active == 'search' %}aria-current="page"{% endif %}>搜索</a>
+        <a href="/publish" {% if active == 'publish' %}aria-current="page"{% endif %}>记一笔</a>
         {% if current_user %}
-          <a href="/me" class="{% if active == 'me' %}font-medium text-stamp{% endif %}">{{ current_user.display_name }}</a>
-          <form method="post" action="/logout" class="inline">
-            <button type="submit" class="underline decoration-stone-400 underline-offset-4">登出</button>
+          <a href="/me" {% if active == 'me' %}aria-current="page"{% endif %}>{{ current_user.display_name }}</a>
+          {% if current_user.role == 'reviewer' %}
+            <a href="/review" {% if active == 'review' %}aria-current="page"{% endif %}>审核</a>
+          {% endif %}
+          <form method="post" action="/logout" hx-boost="false">
+            <button type="submit">登出</button>
           </form>
         {% else %}
-          <a href="/login" class="{% if active == 'login' %}font-medium text-stamp{% endif %}">登录</a>
+          <a href="/login" {% if active == 'login' %}aria-current="page"{% endif %}>登录</a>
         {% endif %}
       </nav>
     </div>
   </header>
-  <main id="content" class="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+  <div class="topbar-space"></div>
+  <main id="content" class="wrap">
     {% block content %}{% endblock %}
   </main>
-  <footer class="border-t border-stone-300">
-    <p class="mx-auto max-w-5xl px-4 py-6 text-xs text-stone-500 sm:px-6">按题材把成片和拍法放在同一页。本地演示，不开放注册。图片如无另注，都是示例图。</p>
+  <footer class="foot">
+    <p>按题材把成片和拍法放在同一页。本地演示，不开放注册。图片如无另注，都是示例图。</p>
   </footer>
 </body>
 </html>

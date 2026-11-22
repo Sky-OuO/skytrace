@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.api.v1 import router as api_router
@@ -77,6 +78,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="SkyTrace", version=__version__, lifespan=lifespan)
     app.include_router(web_router)
     app.include_router(api_router, prefix="/api/v1")
+    app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent / "web" / "static"), name="static")
 
     @app.exception_handler(ApiError)
     async def handle_api_error(request: Request, exc: ApiError):

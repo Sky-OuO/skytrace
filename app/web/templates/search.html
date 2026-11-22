@@ -1,45 +1,47 @@
 {% extends "base.html" %}
 {% block title %}搜索 · SkyTrace{% endblock %}
 {% block content %}
-  <h1 class="font-serif text-3xl">搜索</h1>
-  <form action="/search" method="get" class="mt-4 flex max-w-xl gap-2">
+  <h1 class="page-title">搜索</h1>
+  <form class="search-row" action="/search" method="get">
     <label class="sr-only" for="q">搜索词</label>
-    <input id="q" name="q" type="search" value="{{ q }}" placeholder="题材、别名或地点例子" class="w-full border border-stone-400 bg-white px-3 py-2 text-sm">
-    <button type="submit" class="bg-ink px-4 py-2 text-sm text-paper">搜索</button>
+    <input id="q" name="q" type="search" value="{{ q }}" placeholder="题材、别名或地点例子" hx-get="/search" hx-trigger="keyup changed delay:200ms" hx-target="#search-live" hx-select="#search-live" hx-swap="outerHTML" hx-include="this">
+    <button class="btn" type="submit">搜索</button>
   </form>
-  {% if q %}
-    <section class="mt-8" aria-labelledby="topic-results-heading">
-      <h2 id="topic-results-heading" class="font-serif text-2xl">题材</h2>
-      {% if topics %}
-        <ul class="note-list">
-          {% for topic in topics %}
-            <li>
-              <a href="/s/{{ topic.slug }}"><strong>{{ topic.name }}</strong></a>
-              <p>{{ topic.tagline }}</p>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p class="empty-note">没有匹配的题材。</p>
-      {% endif %}
-    </section>
-    <section class="mt-8" aria-labelledby="work-results-heading">
-      <h2 id="work-results-heading" class="font-serif text-2xl">成片</h2>
-      {% if works %}
-        <ul class="note-list">
-          {% for work in works %}
-            <li>
-              <a href="/s/{{ work.slug }}?work={{ work.id }}"><strong>{{ work.title }}</strong></a>
-              <p class="byline">{{ work.topic }} · {{ work.author }}</p>
-              {% if work.tip %}<p>{{ work.tip }}</p>{% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p class="empty-note">没有匹配的成片。</p>
-      {% endif %}
-    </section>
-  {% else %}
-    <p class="mt-4 text-sm leading-6 text-stone-700">可以试：窗边人像、西餐厅、火车窗边、黄山、光明顶、黄山云海。</p>
-  {% endif %}
+  <div id="search-live">
+    {% if q %}
+      <section aria-labelledby="topic-results-heading">
+        <h2 id="topic-results-heading" class="block-title">题材</h2>
+        {% if topics %}
+          <ul class="note-list">
+            {% for topic in topics %}
+              <li>
+                <a href="/s/{{ topic.slug }}"><strong>{{ topic.name }}</strong></a>
+                <p class="quiet">{{ topic.tagline }}</p>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="empty-note">没有匹配的题材。</p>
+        {% endif %}
+      </section>
+      <section aria-labelledby="work-results-heading">
+        <h2 id="work-results-heading" class="block-title">成片</h2>
+        {% if works %}
+          <ul class="note-list">
+            {% for work in works %}
+              <li>
+                <a href="/s/{{ work.slug }}?work={{ work.id }}"><strong>{{ work.title }}</strong></a>
+                <p class="meta">{{ work.topic }} · {{ work.author }}</p>
+                {% if work.tip %}<p class="quiet">{{ work.tip }}</p>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="empty-note">没有匹配的成片。</p>
+        {% endif %}
+      </section>
+    {% else %}
+      <p class="lede">可以试：窗边人像、西餐厅、火车窗边、黄山、光明顶、黄山云海。</p>
+    {% endif %}
+  </div>
 {% endblock %}

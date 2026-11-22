@@ -1,30 +1,34 @@
 {% extends "base.html" %}
 {% block title %}审核台 · SkyTrace{% endblock %}
 {% block content %}
-  <h1 class="font-serif text-3xl">审核台</h1>
-  <p class="mt-2 text-sm text-stone-600">只有已通过、并且挂在公开题材上的笔记才会出现在首页。</p>
+  <h1 class="page-title">审核台</h1>
+  <p class="lede">只有已通过、并且挂在公开题材上的笔记才会出现在首页。</p>
   {% if tickets %}
     {% for ticket in tickets %}
       <article class="review-card">
-        <p class="byline">{{ ticket.note.author.display_name }} · {{ ticket.note.type_name }}</p>
-        <h2 class="font-serif text-2xl">{{ ticket.note.title }}</h2>
-        {% if ticket.note.body %}<p>{{ ticket.note.body }}</p>{% endif %}
-        <p class="byline">当前题材：{{ ticket.subject.name }}{% if ticket.unsorted %}（待归类，通过前必须改挂）{% endif %}</p>
-        <form method="post" action="/review/{{ ticket.id }}">
-          <label for="subject-{{ ticket.id }}">改挂题材</label>
-          <select id="subject-{{ ticket.id }}" name="subject_id">
-            <option value="">不改</option>
-            {% for topic in topics %}
-              <option value="{{ topic.id }}">{{ topic.name }}</option>
-            {% endfor %}
-          </select>
-          <label for="reason-{{ ticket.id }}">驳回理由</label>
-          <input id="reason-{{ ticket.id }}" name="reason" type="text" placeholder="驳回时填写">
-          <p class="form-actions">
-            <button class="primary" type="submit" name="decision" value="approved">通过</button>
-            <button type="submit" name="decision" value="rejected">驳回</button>
-          </p>
-        </form>
+        <div class="pad">
+          <p class="meta">{{ ticket.note.author.display_name }} · {{ ticket.note.type_name }}</p>
+          <h2 class="block-title">{{ ticket.note.title }}</h2>
+          {% if ticket.note.body %}<p>{{ ticket.note.body }}</p>{% endif %}
+          <p class="meta">当前题材：{{ ticket.subject.name }}{% if ticket.unsorted %} · 待归类，通过前必须改挂{% endif %}</p>
+          <form class="review-form" method="post" action="/review/{{ ticket.id }}" hx-boost="false">
+            <label class="field" for="subject-{{ ticket.id }}">改挂题材
+              <select id="subject-{{ ticket.id }}" name="subject_id">
+                <option value="">不改</option>
+                {% for topic in topics %}
+                  <option value="{{ topic.id }}">{{ topic.name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="field" for="reason-{{ ticket.id }}">驳回理由
+              <input id="reason-{{ ticket.id }}" name="reason" type="text" placeholder="驳回时填写">
+            </label>
+            <div class="actions">
+              <button class="btn" type="submit" name="decision" value="approved">通过</button>
+              <button class="btn ghost" type="submit" name="decision" value="rejected">驳回</button>
+            </div>
+          </form>
+        </div>
       </article>
     {% endfor %}
   {% else %}

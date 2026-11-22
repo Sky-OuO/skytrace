@@ -1,12 +1,22 @@
 <a class="card" href="/s/{{ card.slug }}?work={{ card.id }}">
-  {% if card.image %}
-    <img src="{{ card.image }}" alt="{{ card.alt }}" width="{{ card.width or 900 }}" height="{{ card.height or 1200 }}">
-  {% endif %}
-  <span class="sample-flag">示例图</span>
+  <span class="frame" style="aspect-ratio: {{ card.width or 3 }} / {{ card.height or 4 }};">
+    {% if card.image %}
+      <img
+        src="{{ card.image }}"
+        alt="{{ card.alt }}"
+        width="{{ card.width or 900 }}"
+        height="{{ card.height or 1200 }}"
+        {% if loop is defined and loop.index <= 2 %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}
+        decoding="async"
+        data-shot="{{ card.id }}"
+        style="view-transition-name: shot-{{ card.id }}"
+      >
+    {% endif %}
+  </span>
   <span class="card-body">
-    <span class="topic-chip">{{ card.topic }}</span>
     <strong class="card-title">{{ card.title }}</strong>
-    {% if card.tip %}<span class="tip">{{ card.tip }}</span>{% endif %}
-    <span class="byline">{{ card.author }}</span>
+    <span class="topic-name">{{ card.topic }}</span>
+    <span class="meta">{{ card.author }}{% if card.tip %} · {{ card.tip }}{% endif %}</span>
+    <span class="sample-flag">示例图</span>
   </span>
 </a>
