@@ -25,6 +25,10 @@ from fastapi_users.authentication.strategy.db import DatabaseStrategy
 router = APIRouter(include_in_schema=False)
 
 SUBJECT_TYPE_NAMES = {"location": "地点", "scene": "场景", "theme": "主题"}
+LEGACY_SLUGS = {
+    "window-portrait": "window-light-portrait",
+    "huangshan": "sea-of-clouds-sunrise",
+}
 
 
 def safe_next(value: str | None) -> str:
@@ -157,6 +161,10 @@ async def subject_page(
     user: User | None = Depends(get_optional_user),
     session: AsyncSession = Depends(get_session),
 ):
+    if slug in LEGACY_SLUGS:
+        target = LEGACY_SLUGS[slug]
+        suffix = f"?work={work}" if work else ""
+        return RedirectResponse(f"/s/{target}{suffix}", status_code=302)
     subject = await public_subject(session, slug)
     if subject is None:
         raise ApiError(404, "NOT_FOUND", "对象不存在")

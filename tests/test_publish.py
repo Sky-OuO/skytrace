@@ -19,12 +19,12 @@ def _png() -> bytes:
 
 
 async def test_publish_form_is_short_and_preselects_topic(client):
-    await client.post("/login", data={**AUTHOR, "next": "/publish?subject=window-portrait"})
-    page = await client.get("/publish?subject=window-portrait")
+    await client.post("/login", data={**AUTHOR, "next": "/publish?subject=window-light-portrait"})
+    page = await client.get("/publish?subject=window-light-portrait")
     assert page.status_code == 200
     assert "一句拍摄说明" in page.text
     assert "窗边人像" in page.text
-    assert 'value="window-portrait"' in page.text
+    assert 'value="window-light-portrait"' in page.text
     assert "待归类" in page.text
     assert "私房" not in page.text
     picker = await client.get("/partials/topic-picker", params={"q": "西餐厅"})
@@ -36,7 +36,7 @@ async def test_author_submits_and_reviewer_approves_into_feed(client, engine):
     page = await client.post(
         "/publish",
         data={
-            "subject_slug": "window-portrait",
+            "subject_slug": "window-light-portrait",
             "type": "finished",
             "body": "阴天侧窗，人侧坐，近处暖灯关掉。",
             "portrait_auth": "on",
@@ -63,7 +63,7 @@ async def test_author_submits_and_reviewer_approves_into_feed(client, engine):
     )
     assert decision.status_code == 200, decision.text
     await client.post("/api/v1/auth/logout")
-    visible = (await client.get("/api/v1/subjects/window-portrait/notes", params={"type": "finished"})).json()
+    visible = (await client.get("/api/v1/subjects/window-light-portrait/notes", params={"type": "finished"})).json()
     assert any("阴天侧窗，人侧坐" in item["title"] for item in visible["items"])
     home = await client.get("/")
     assert "阴天侧窗，人侧坐" in home.text
@@ -100,13 +100,13 @@ async def test_unsorted_cannot_be_approved_until_reassigned(client, engine):
     blocked = await client.post(f"/api/v1/review/tickets/{ticket['id']}/decide", json={"decision": "approved"})
     assert blocked.status_code == 422
     async with factory() as session:
-        target = (await session.execute(select(Subject).where(Subject.slug == "huangshan"))).scalar_one()
+        target = (await session.execute(select(Subject).where(Subject.slug == "sea-of-clouds-sunrise"))).scalar_one()
         target_id = target.id
     moved = await client.post(
         f"/api/v1/review/tickets/{ticket['id']}/decide",
         json={"decision": "approved", "subject_id": str(target_id)},
     )
     assert moved.status_code == 200, moved.text
-    listed = (await client.get("/api/v1/subjects/huangshan/notes", params={"type": "finished"})).json()
+    listed = (await client.get("/api/v1/subjects/sea-of-clouds-sunrise/notes", params={"type": "finished"})).json()
     assert any(item["id"] == note_id for item in listed["items"])
     assert UUID(note_id)

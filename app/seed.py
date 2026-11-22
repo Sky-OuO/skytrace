@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fastapi_users.password import PasswordHelper
 from pydantic import ValidationError
-from sqlalchemy import delete, func
+from sqlalchemy import delete, func, update
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from sqlmodel import select
 
@@ -15,7 +15,7 @@ from app.catalog import TAGS
 from app.config import get_settings
 from app.db import ensure_schema, make_engine, make_session_factory
 from app.domain import UNSORTED_SLUG, SubjectGuide, SubjectSeed
-from app.models import Note, Subject, SubjectExample, SubjectTag, Tag, User
+from app.models import Media, Note, NoteTag, ReviewTicket, Subject, SubjectExample, SubjectTag, Tag, User
 from app.seed_works import seed_works
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,6 +93,8 @@ async def _upsert_subject(session: AsyncSession, seed: SubjectSeed, author_id) -
             tagline=seed.tagline,
             aliases=list(seed.aliases),
             guide=guide,
+            notices=list(seed.notices),
+            pending_verify=list(seed.pending_verify),
             created_by=author_id,
         )
         session.add(subject)
@@ -107,6 +109,8 @@ async def _upsert_subject(session: AsyncSession, seed: SubjectSeed, author_id) -
         subject.tagline = seed.tagline
         subject.aliases = list(seed.aliases)
         subject.guide = guide
+        subject.notices = list(seed.notices)
+        subject.pending_verify = list(seed.pending_verify)
         if subject.created_by is None:
             subject.created_by = author_id
     await _replace_examples(session, subject, seed)
@@ -126,14 +130,14 @@ async def _replace_examples(session: AsyncSession, subject: Subject, seed: Subje
             row = SubjectExample(
                 subject_id=subject.id,
                 name=example.name,
-                geo_text=example.geo_text,
+                geo_text=example.geo_text or None,
                 note=example.note,
                 sort_order=order,
                 verify_status=example.verify_status,
             )
             session.add(row)
         else:
-            row.geo_text = example.geo_text
+            row.geo_text = example.geo_text or None
             row.note = example.note
             row.sort_order = order
             row.verify_status = example.verify_status
@@ -156,6 +160,8 @@ async def _ensure_unsorted(session: AsyncSession, author_id) -> None:
                 tagline="还没挂上题材的投稿。只在审核台可见。",
                 aliases=[],
                 guide=None,
+                notices=[],
+                pending_verify=[],
                 safety_notes="审核员必须先改挂到真实题材，才能通过。",
                 created_by=author_id,
             )
@@ -163,6 +169,25 @@ async def _ensure_unsorted(session: AsyncSession, author_id) -> None:
         return
     subject.name = "待归类"
     subject.tagline = "还没挂上题材的投稿。只在审核台可见。"
+
+
+async def _delete_subject_tree(session: AsyncSession, subject: Subject) -> None:
+    """连同示例图和示例笔记一起去掉，避免旧种子混进新清单。"""
+    subject.cover_media_id = None
+    await session.flush()
+    note_ids = list((await session.execute(select(Note.id).where(Note.subject_id == subject.id))).scalars())
+    if note_ids:
+        await session.execute(delete(ReviewTicket).where(ReviewTicket.note_id.in_(note_ids)))
+        await session.execute(delete(NoteTag).where(NoteTag.note_id.in_(note_ids)))
+        media_ids = list((await session.execute(select(Media.id).where(Media.note_id.in_(note_ids)))).scalars())
+        if media_ids:
+            await session.execute(update(Subject).where(Subject.cover_media_id.in_(media_ids)).values(cover_media_id=None))
+        await session.execute(delete(Media).where(Media.note_id.in_(note_ids)))
+        await session.execute(delete(Note).where(Note.id.in_(note_ids)))
+    await session.execute(delete(Media).where(Media.subject_id == subject.id))
+    await session.execute(delete(SubjectExample).where(SubjectExample.subject_id == subject.id))
+    await session.execute(delete(SubjectTag).where(SubjectTag.subject_id == subject.id))
+    await session.delete(subject)
 
 
 async def _prune(session: AsyncSession, keep_slugs: set[str]) -> int:
@@ -173,15 +198,9 @@ async def _prune(session: AsyncSession, keep_slugs: set[str]) -> int:
     for subject in list(result.scalars()):
         if subject.slug in keep_slugs:
             continue
-        note_count = await session.scalar(select(func.count()).select_from(Note).where(Note.subject_id == subject.id))
-        if note_count:
-            print(f"保留 {subject.slug}：已有 {note_count} 篇笔记，不删除。")
-            continue
-        await session.execute(delete(SubjectExample).where(SubjectExample.subject_id == subject.id))
-        await session.execute(delete(SubjectTag).where(SubjectTag.subject_id == subject.id))
-        await session.delete(subject)
+        await _delete_subject_tree(session, subject)
         removed += 1
-        print(f"已移除不在种子清单里的空题材：{subject.slug}")
+        print(f"已移除不在编辑清单里的题材：{subject.slug}")
     return removed
 
 

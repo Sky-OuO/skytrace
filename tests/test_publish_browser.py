@@ -103,7 +103,7 @@ def test_publish_posts_to_the_form_action_and_can_be_approved(live_server, tmp_p
         page.get_by_role("button", name="登录").click()
         page.wait_for_load_state("networkidle")
 
-        page.goto(live_server + "/publish?subject=window-portrait")
+        page.goto(live_server + "/publish?subject=window-light-portrait")
         page.set_input_files("#image", str(image))
         page.fill("#body", SENTENCE)
         page.check('input[name="portrait_auth"]')

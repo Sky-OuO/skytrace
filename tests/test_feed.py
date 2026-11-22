@@ -19,13 +19,13 @@ async def test_home_feed_is_two_column_and_mixes_topics(client):
     assert "示例图" in html
     assert "窗边人像" in html
     assert "黄山" in html
-    assert "阴天窗光作主光" in html
-    assert 'href="/s/window-portrait?work=' in html
+    assert "主光来自窗" in html
+    assert 'href="/s/window-light-portrait?work=' in html
     assert "私房" not in html
     assert "思想开源" not in html
     portrait = await client.get("/", params={"channel": "portrait"})
     assert "窗边人像" in portrait.text
-    assert "黄山 清晨云海" not in portrait.text
+    assert "山岳云海日出" not in portrait.text
 
 
 async def test_feed_cursor_channel_and_coverage(client, engine):
@@ -62,8 +62,8 @@ async def test_feed_cursor_channel_and_coverage(client, engine):
     counts = Counter({slug: count for slug, count in rows})
     assert len(counts) == subjects
     assert min(counts.values()) >= 1
-    assert counts["huangshan"] >= 3
-    assert counts["window-portrait"] >= 3
+    assert counts["sea-of-clouds-sunrise"] >= 3
+    assert counts["window-light-portrait"] >= 3
     async with factory() as session:
         keys = list(
             (

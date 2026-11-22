@@ -76,6 +76,8 @@ rejected --再提交--> pending_review
 | tagline | text | 可空。题材一句话 |
 | aliases | jsonb / json | 别名数组，默认 `[]` |
 | guide | jsonb / json | 可空。六段编辑要点。`unsorted` 为空 |
+| notices | jsonb / json | 可空。题材须知，人像题材包含展示授权 |
+| pending_verify | jsonb / json | 可空。尚未核实的条目，页面用灰色「待核实」标出 |
 | created_by | uuid | 可空，外键 `users.id`，用户删除时置空 |
 | created_at | timestamptz | |
 | search_vector | tsvector | 触发器维护，不由应用写入 |
