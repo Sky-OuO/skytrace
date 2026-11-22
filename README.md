@@ -1,24 +1,10 @@
 # SkyTrace
 
-摄影对象知识库的本地原型。主线是对象页和结构化笔记，不是照片流。
+摄影题材的拍法站。首页先看图文，点进去是一个题材页：成片、踩点、前期、后期、用光、姿势在同一页。咖啡馆、西餐厅、火车窗是「窗边人像」的例子，不是三个栏目。
 
-这个仓库目前只做第 1–2 天的骨架：能从空库启动、用预置帐号登录、把图片存到本地磁盘，并让 ARQ worker 空转。频道浏览、发布表单、审核台、搜索查询和发布助手都还是占位。
+## 跑起来
 
-## 技术栈
-
-- FastAPI、Pydantic、Uvicorn。同一个进程提供页面和 `/api/v1`。
-- Jinja2 模板，HTMX 已放进基础布局。第 1–2 天只用它刷新首页上的对象库存。
-- Tailwind CSS 使用官方 Play CDN（`https://cdn.tailwindcss.com`）。不单独构建样式。页面在加载不到 CDN 时仍然能读，只是没有这套排版。
-- PostgreSQL 16、SQLModel、Alembic。
-- 登录是会话 Cookie，会话行在 `access_tokens`。用的是 FastAPI-Users 的数据库策略，不是 JWT。没有注册，也不接 OAuth / 微信。Authlib 已列入依赖，留给以后。
-- Redis 和 ARQ。不要同时加 Celery。
-- 媒体默认写到 `var/media`。`storage_key` 是相对这段目录的路径。
-
-依赖写在 `pyproject.toml`。安装方式是 `pip install -e ".[dev]"`，没有另附锁文件。
-
-## 从空库跑起来
-
-演示不需要 Docker、PostgreSQL 或 Redis。一条命令会建 SQLite、导入题材种子并启动页面：
+不需要 Docker、PostgreSQL 或 Redis。
 
 ```bash
 python3 -m venv .venv
@@ -27,77 +13,73 @@ pip install -e ".[dev]"
 python -m app.demo
 ```
 
-浏览器打开 <http://127.0.0.1:8000>。数据库文件在 `var/skytrace.db`。重复执行 `python -m app.seed --prune` 会按 slug 更新种子，并删掉没有笔记的过期题材。
+浏览器打开 <http://127.0.0.1:8000>。数据库在 `var/skytrace.db`，示例图在 `var/media/seed/`。
 
-可选 PostgreSQL：把 `DATABASE_URL` 设为 `postgresql+asyncpg://...` 后执行 `alembic upgrade head` 再 `python -m app.seed --prune`。迁移 `0002_topics` 加题材字段和 `subject_examples`。没有 Postgres 时不要跑 Alembic，SQLite 由程序按模型建表。
-
-Redis 只给 ARQ worker。演示主路径不入队。有 Redis 时可以另开终端跑 `arq app.worker.WorkerSettings`，它会空转。
-
-下面是早期依赖 Docker 的写法，现在不是默认路径：
+再导入一次种子（不会重复插成片）：
 
 ```bash
-cp .env.example .env
-docker compose up -d
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-alembic upgrade head
-python -m app.seed
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+python -m app.seed --subjects seeds/subjects.json --prune
 ```
 
-另开一个终端启动 worker。它会连上 Redis 后空转，队列里没有任务：
+测试：
 
 ```bash
-source .venv/bin/activate
-arq app.worker.WorkerSettings
-```
-
-浏览器打开 <http://127.0.0.1:8000>。
-
-`alembic upgrade head` 可以重复执行。`python -m app.seed` 也可以重复执行：标签和 10 个对象按 slug 更新，演示帐号的密码会改成当前 `.env` 里的值。
-
-媒体目录由 `MEDIA_ROOT` 决定，预览地址由 `MEDIA_PREVIEW_BASE_URL` 决定。单张图片默认不超过 10MB。本地 http 请保持 `SESSION_COOKIE_SECURE=false`。
-
-ARQ 0.28 不允许一个函数都不注册，所以 worker 挂了占位函数 `reserved_idle`。Web 进程没有入队代码。第 9 天之前不要往这个队列投任务。
-
-## 演示帐号
-
-没有注册入口。邮箱和密码写在 `.env.example`，复制到 `.env` 后由种子脚本创建。下面是这份示例里的默认值，只给本地演示用，不要拿去部署。
-
-| 角色 | 邮箱 | 密码变量 | 示例密码 |
-|---|---|---|---|
-| 作者 | `author@skytrace.local` | `DEMO_AUTHOR_PASSWORD` | `author-demo-pass` |
-| 审核员（可兼作者） | `reviewer@skytrace.local` | `DEMO_REVIEWER_PASSWORD` | `reviewer-demo-pass` |
-
-显示名默认是「演示作者」和「演示审核员」。
-
-## 第 1–2 天怎么验收
-
-自动化：
-
-```bash
-source .venv/bin/activate
 pytest
 ```
 
-测试使用临时 SQLite，不写你的开发库，也不需要 PostgreSQL 或 Redis。本机没有 Redis 时，worker 那一条会跳过。
+测试用临时 SQLite，不写开发库。本机没有 Redis 时，worker 那一条会跳过。
 
-手工：
+可选 PostgreSQL：设置 `DATABASE_URL=postgresql+asyncpg://skytrace:skytrace@localhost:5432/skytrace`，然后 `alembic upgrade head` 和 `python -m app.seed --prune`。没有 Postgres 时不要跑 Alembic。
 
-1. 首页导航是首页、人像、风光、搜索、记一笔和登录。公开页面里没有「私房」，导航里没有思想开源，也没有人文频道。`/ideas` 仍可直接打开，只是没有入口。
-2. 公开题材来自 `seeds/subjects.json`，数量在 30 到 50。窗边人像的示例含咖啡馆窗边、西餐厅靠窗、火车窗边，这些不是独立题材。
-3. 用作者帐号登录后再登出。未登录打开 `/publish` 会去登录页。作者打开 `/review` 得到 403，审核员可以进入占位审核台。
-4. `GET /api/v1/auth/me`、`/api/v1/vocab`、`/api/v1/channels`、`/api/v1/subjects` 可用。对象列表是种子题材，不含隐藏的 `unsorted`。
-5. 登录后 `POST /api/v1/media` 上传一张图片，用返回的 `preview_url` 能读回同一份字节。未登录上传会 401。
-6. `DATA_MODEL.md` 与迁移一致。worker 能启动并因为队列为空而空转。
+## 两分钟演示
 
-交互式接口说明在 <http://127.0.0.1:8000/docs>。未实现的写接口挂在 `/api/v1` 上，返回约定错误码，而不是 501。
+详见 [DEMO.md](DEMO.md)。最短的一条：
 
-## 这几天故意没做
+1. 首页是两列图文，人像和风光混在一起。筛选是收着的。
+2. 点「窗边人像 阴天侧窗 侧坐靠窗」，落在窗边人像，这张图被标成「正在看这一张」。
+3. 同一页往下看用光（窗是主光，关掉暖灯）、姿势（身体和窗大约四十五度）、后期（白平衡看脸）。
+4. 在踩点里展开地点例子，能看到咖啡馆窗边、西餐厅靠窗、火车窗边。
+5. 回首页，点一张黄山。结构相同。
+6. 记一笔：窗边人像 + 成片分享，一张图加一句，勾肖像授权，提交后看到待审。
 
-- 完整的频道、对象、笔记浏览器，以及发布表单。
-- 审核台的通过和驳回。
-- 搜索的实际查询，以及自然语言解析。全文索引已经建好。
-- 发布助手和任何大模型调用。
-- OAuth、微信登录、域名和对象存储服务。图片只进本地磁盘。
+## 演示帐号
+
+没有注册。
+
+| 角色 | 邮箱 | 密码 |
+|---|---|---|
+| 作者 | `author@skytrace.local` | `author-demo-pass` |
+| 审核员 | `reviewer@skytrace.local` | `reviewer-demo-pass` |
+
+卡片上的林夏、周屿、陈衡、编辑部是种子署名，不是这两个登录帐号。
+
+## 已经能用
+
+- 首页两列图文，筛选默认收起，向下滚动继续加载。点卡片进入题材页并高亮那一张。返回时尽量回到原来的滚动位置。
+- 题材页六段固定顺序：成片、踩点、前期、后期、用光、姿势。编辑写的 2–4 条在前，已通过的笔记在后。一段都没有时写「还没有这类笔记」。
+- 地点例子收在踩点里，默认折叠。
+- 记一笔：选题材和类型，只出现该类型的字段。人像要勾肖像授权。可以选待归类。
+- 审核台：待归类的稿子必须先改挂到真实题材才能通过。通过后同时出现在首页和题材成片里。
+- 搜索先出题材，再出成片。人像 `/portrait`，风光 `/landscape`。
+- 45 个公开题材，种子在 `seeds/subjects.json`。
+
+## 模拟或没做
+
+- 图都是程序画的示例图，每张构图不同，并标明「示例图」。不是实拍，也没有从网上抓图。
+- 发布助手是关键词规则，只建议题材和类型，不写正文，没有接大模型。
+- 搜索是 `LIKE` 子串，没有中文分词。「黄昏的西湖」这类话会按几条规则改写成关键词。
+- 题材六段是编辑写进种子的静态句子，不是模型摘要。
+- 不开放注册，没有微信登录，没有地图，没有关注和收藏。
+- `/ideas` 还在，说明思想开源后置，但导航里没有入口。
+- Redis / ARQ worker 可以空转，演示主路径不依赖它。
+
+## 决定
+
+- 沿用第 1–2 天的 FastAPI、Jinja、HTMX、SQLModel。不改成 Next.js。
+- 本机没有 Postgres 时默认 SQLite，这样一条命令就能跑。Postgres 仍走 Alembic，`0002_topics` 加题材字段和 `subject_examples`。
+- 题材就是原来的 `subjects`。`notes.subject_id` 仍然必填。待归类使用隐藏题材 `unsorted`，不进首页、频道和搜索。
+- 公开导航只有首页、人像、风光、搜索、记一笔。没有「私房」，也没有人文频道。种子清单里原来的人文地点并进风光。
+- 咖啡馆窗边、西餐厅靠窗、火车窗边是窗边人像的示例行，不是独立题材。
+- 六段在人像和风光上都按同一顺序排开，方便对照。风光的「姿势」写成人物只作尺度，不编造摆拍教程。
+- 中文别名按原文写入 JSON。SQLite 的 JSON 不转成 `\uXXXX`，否则 `LIKE` 搜不到「黄山云海」。
+- 票价、季节窗口、具体时刻没有核实的，示例标成待核实，正文里不写死数字。

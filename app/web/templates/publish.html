@@ -37,16 +37,18 @@
       {% include "partials/publish_fields.html" %}
     </div>
 
-    <fieldset class="tag-set">
-      <legend>标签已按题材预填，可以改</legend>
-      {% for slug, name in tags %}
-        <label class="choice"><input type="checkbox" name="tags" value="{{ slug }}" {% if slug in selected_tags %}checked{% endif %}>{{ name }}</label>
-      {% endfor %}
-    </fieldset>
-
     <p class="form-actions">
       <button class="primary" type="submit" name="action" value="submit">提交</button>
       <button type="submit" name="action" value="draft">存草稿</button>
     </p>
+
+    <details class="filter-fold">
+      <summary>标签已按题材预填，可以改</summary>
+      <fieldset class="tag-set">
+        {% for slug, name in tags %}
+          <label class="choice"><input type="checkbox" name="tags" value="{{ slug }}" {% if slug in selected_tags %}checked{% endif %}>{{ name }}</label>
+        {% endfor %}
+      </fieldset>
+    </details>
   </form>
 {% endblock %}
