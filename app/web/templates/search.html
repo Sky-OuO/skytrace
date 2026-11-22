@@ -1,15 +1,45 @@
 {% extends "base.html" %}
 {% block title %}搜索 · SkyTrace{% endblock %}
 {% block content %}
-  <p class="text-xs tracking-[0.22em] text-stone-500">搜索占位</p>
-  <h1 class="mt-3 font-serif text-4xl">搜索</h1>
-  <form action="/search" method="get" class="mt-6 flex max-w-xl gap-2">
+  <h1 class="font-serif text-3xl">搜索</h1>
+  <form action="/search" method="get" class="mt-4 flex max-w-xl gap-2">
     <label class="sr-only" for="q">搜索词</label>
-    <input id="q" name="q" type="search" value="{{ q }}" placeholder="对象、机位或光线" class="w-full border border-stone-400 bg-white px-3 py-2 text-sm">
+    <input id="q" name="q" type="search" value="{{ q }}" placeholder="题材、别名或地点例子" class="w-full border border-stone-400 bg-white px-3 py-2 text-sm">
     <button type="submit" class="bg-ink px-4 py-2 text-sm text-paper">搜索</button>
   </form>
-  <p class="mt-4 max-w-2xl text-sm leading-7 text-stone-700">搜索查询还没开放。全文索引已经建在数据库里，结果列表会在后面接上。</p>
   {% if q %}
-    <p class="mt-4 text-sm">已记下搜索词「{{ q }}」，这次不会返回结果。</p>
+    <section class="mt-8" aria-labelledby="topic-results-heading">
+      <h2 id="topic-results-heading" class="font-serif text-2xl">题材</h2>
+      {% if topics %}
+        <ul class="note-list">
+          {% for topic in topics %}
+            <li>
+              <a href="/s/{{ topic.slug }}"><strong>{{ topic.name }}</strong></a>
+              <p>{{ topic.tagline }}</p>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty-note">没有匹配的题材。</p>
+      {% endif %}
+    </section>
+    <section class="mt-8" aria-labelledby="work-results-heading">
+      <h2 id="work-results-heading" class="font-serif text-2xl">成片</h2>
+      {% if works %}
+        <ul class="note-list">
+          {% for work in works %}
+            <li>
+              <a href="/s/{{ work.slug }}?work={{ work.id }}"><strong>{{ work.title }}</strong></a>
+              <p class="byline">{{ work.topic }} · {{ work.author }}</p>
+              {% if work.tip %}<p>{{ work.tip }}</p>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty-note">没有匹配的成片。</p>
+      {% endif %}
+    </section>
+  {% else %}
+    <p class="mt-4 text-sm leading-6 text-stone-700">可以试：窗边人像、西餐厅、火车窗边、黄山、光明顶、黄山云海。</p>
   {% endif %}
 {% endblock %}
