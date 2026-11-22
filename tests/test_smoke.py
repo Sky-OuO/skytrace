@@ -15,7 +15,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.config import get_settings
 from app.domain import NOTE_FIELD_MODELS, note_field_keys
 from app.errors import ApiError
-from app.main import app
 from app.models import Note, Subject
 from app.services.storage import resolve_storage_path
 

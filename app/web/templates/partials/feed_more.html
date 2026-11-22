@@ -1,0 +1,6 @@
+{% for card in cards %}
+  {% include "partials/card.html" %}
+{% endfor %}
+{% if next_cursor %}
+  <div id="feed-sentinel" class="feed-sentinel" hx-get="/partials/feed?cursor={{ next_cursor }}{% if feed_channel %}&channel={{ feed_channel }}{% endif %}" hx-trigger="revealed" hx-swap="outerHTML"></div>
+{% endif %}

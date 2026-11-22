@@ -16,6 +16,7 @@ from app.config import get_settings
 from app.db import ensure_schema, make_engine, make_session_factory
 from app.domain import UNSORTED_SLUG, SubjectGuide, SubjectSeed
 from app.models import Note, Subject, SubjectExample, SubjectTag, Tag, User
+from app.seed_works import seed_works
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SUBJECTS = ROOT / "seeds" / "subjects.json"
@@ -226,10 +227,13 @@ async def seed(path: Path | None = None, *, prune: bool = False) -> None:
         removed = 0
         if prune:
             removed = await _prune(session, {item.slug for item in seeds})
+        works = await seed_works(session, helper)
         await session.commit()
     await engine.dispose()
     example_count = sum(len(item.examples) for item in seeds)
-    print(f"种子已写入：{len(TAGS)} 个标签，{len(seeds)} 个公开题材，{example_count} 个地点示例，隐藏题材 {UNSORTED_SLUG}。")
+    print(
+        f"种子已写入：{len(TAGS)} 个标签，{len(seeds)} 个公开题材，{example_count} 个地点示例，{works} 条成片，隐藏题材 {UNSORTED_SLUG}。"
+    )
     if prune:
         print(f"本次移除空题材 {removed} 个。")
     # 导入时再校验一遍，避免种子和模型漂移。
