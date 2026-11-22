@@ -2,23 +2,18 @@
 {% block title %}SkyTrace · 摄影题材{% endblock %}
 {% block content %}
   {% if topics %}
-    <details class="filter-fold">
-      <summary>{{ channel_title }}题材 · {{ topics|length }}</summary>
-      <p class="topic-strip">
-        {% for topic in topics %}
-          <a href="/s/{{ topic.slug }}">{{ topic.name }}</a>
-        {% endfor %}
-      </p>
-    </details>
+    <div class="topic-strip" aria-label="{{ channel_title }}题材">
+      {% for topic in topics %}
+        <a href="/s/{{ topic.slug }}">{{ topic.name }}</a>
+      {% endfor %}
+    </div>
   {% endif %}
-  <details class="filter-fold">
-    <summary>筛选</summary>
-    <p class="filter-links">
-      <a href="/"{% if not feed_channel %} aria-current="page"{% endif %}>全部</a>
-      <a href="/?channel=portrait"{% if feed_channel == 'portrait' %} aria-current="page"{% endif %}>人像</a>
-      <a href="/?channel=landscape"{% if feed_channel == 'landscape' %} aria-current="page"{% endif %}>风光</a>
-    </p>
-  </details>
+  <div class="pills" aria-label="筛选">
+    <span class="sr-only">筛选</span>
+    <a href="/" data-feed-filter hx-get="/partials/feed" hx-target="#feed" hx-swap="innerHTML" hx-push-url="/" {% if not feed_channel %}aria-current="page"{% endif %}>全部</a>
+    <a href="/?channel=portrait" data-feed-filter hx-get="/partials/feed?channel=portrait" hx-target="#feed" hx-swap="innerHTML" hx-push-url="/?channel=portrait" {% if feed_channel == 'portrait' %}aria-current="page"{% endif %}>人像</a>
+    <a href="/?channel=landscape" data-feed-filter hx-get="/partials/feed?channel=landscape" hx-target="#feed" hx-swap="innerHTML" hx-push-url="/?channel=landscape" {% if feed_channel == 'landscape' %}aria-current="page"{% endif %}>风光</a>
+  </div>
   {% if cards %}
     <div id="feed" class="masonry">
       {% for card in cards %}
@@ -31,24 +26,4 @@
   {% else %}
     <p class="empty-note">还没有已通过的成片。</p>
   {% endif %}
-  <script>
-    (function () {
-      var feed = document.getElementById("feed");
-      if (!feed) return;
-      var key = "skytrace-feed-scroll";
-      var pathKey = "skytrace-feed-path";
-      var here = location.pathname + location.search;
-      feed.addEventListener("click", function (event) {
-        var link = event.target.closest("a.card");
-        if (!link) return;
-        sessionStorage.setItem(key, String(window.scrollY));
-        sessionStorage.setItem(pathKey, here);
-      });
-      window.addEventListener("pageshow", function () {
-        if (sessionStorage.getItem(pathKey) !== here) return;
-        var y = Number(sessionStorage.getItem(key) || "0");
-        if (y > 0) window.scrollTo(0, y);
-      });
-    })();
-  </script>
 {% endblock %}
