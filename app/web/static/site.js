@@ -225,6 +225,22 @@
     return ok;
   }
 
+  function formAction(form) {
+    // A control named "action" shadows HTMLFormElement.action and returns a RadioNodeList.
+    return form.getAttribute("action") || window.location.pathname;
+  }
+
+  function formData(form, submitter) {
+    try {
+      if (submitter) return new FormData(form, submitter);
+    } catch (err) {
+      /* Older browsers reject the submitter argument. */
+    }
+    var data = new FormData(form);
+    if (submitter && submitter.name) data.set(submitter.name, submitter.value);
+    return data;
+  }
+
   function bindPublish(form) {
     if (form.dataset.bound) return;
     form.dataset.bound = "1";
@@ -237,11 +253,10 @@
       event.preventDefault();
       event.stopPropagation();
       var submitter = event.submitter;
-      var data = new FormData(form);
-      if (submitter && submitter.name) data.set(submitter.name, submitter.value);
+      var data = formData(form, submitter);
       var buttons = form.querySelectorAll("button");
       buttons.forEach(function (button) { button.disabled = true; });
-      fetch(form.action, { method: "POST", body: data, redirect: "manual", credentials: "same-origin" })
+      fetch(formAction(form), { method: "POST", body: data, redirect: "manual", credentials: "same-origin" })
         .then(function (response) {
           if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
             var draft = submitter && submitter.value === "draft";
@@ -264,10 +279,9 @@
     form.dataset.bound = "1";
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      var data = new FormData(form);
-      if (event.submitter && event.submitter.name) data.set(event.submitter.name, event.submitter.value);
+      var data = formData(form, event.submitter);
       var decision = data.get("decision");
-      fetch(form.action, { method: "POST", body: data, redirect: "manual", credentials: "same-origin" })
+      fetch(formAction(form), { method: "POST", body: data, redirect: "manual", credentials: "same-origin" })
         .then(function (response) {
           if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
             toast(decision === "rejected" ? "已驳回" : "已通过，待审结束");
