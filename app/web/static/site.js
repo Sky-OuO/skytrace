@@ -74,9 +74,11 @@
     return '<article class="card skeleton" aria-hidden="true"><span class="frame" style="aspect-ratio:3/4"></span><span class="card-body"><span class="sk"></span><span class="sk short"></span></span></article>';
   }
 
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  var restoring = false;
+
   function saveFeedScroll() {
-    var feed = document.getElementById("feed");
-    if (!feed) return;
+    if (restoring || !document.getElementById("feed")) return;
     sessionStorage.setItem("skytrace-feed-scroll", String(window.scrollY));
     sessionStorage.setItem("skytrace-feed-path", location.pathname + location.search);
   }
@@ -84,8 +86,19 @@
   function restoreFeedScroll() {
     var path = sessionStorage.getItem("skytrace-feed-path");
     if (path !== location.pathname + location.search) return;
+    if (!document.getElementById("feed")) return;
     var y = Number(sessionStorage.getItem("skytrace-feed-scroll") || "0");
-    if (y > 0) window.scrollTo(0, y);
+    if (y <= 0) return;
+    restoring = true;
+    var tries = 0;
+    var timer = setInterval(function () {
+      if (document.getElementById("feed")) window.scrollTo(0, y);
+      tries += 1;
+      if (tries >= 24) {
+        clearInterval(timer);
+        restoring = false;
+      }
+    }, 40);
   }
 
   document.addEventListener("click", function (event) {
@@ -119,12 +132,17 @@
   });
 
   window.addEventListener("pageshow", restoreFeedScroll);
-  document.body.addEventListener("htmx:historyRestore", restoreFeedScroll);
-  document.body.addEventListener("htmx:afterSettle", function () {
+  window.addEventListener("popstate", restoreFeedScroll);
+  document.addEventListener("htmx:historyRestore", restoreFeedScroll);
+  document.addEventListener("htmx:afterSettle", restoreFeedScroll);
+  document.addEventListener("htmx:afterSettle", function () {
     armAll();
     watchSections();
+    document.querySelectorAll(".drop").forEach(bindDrop);
+    document.querySelectorAll("form.publish-form").forEach(bindPublish);
+    document.querySelectorAll("form.review-form").forEach(bindReview);
   });
-  document.body.addEventListener("htmx:beforeRequest", function (event) {
+  document.addEventListener("htmx:beforeRequest", function (event) {
     var el = event.detail.elt;
     if (el && el.classList.contains("feed-sentinel")) {
       el.insertAdjacentHTML("beforebegin", skeleton() + skeleton());
@@ -134,11 +152,13 @@
       if (feed) feed.insertAdjacentHTML("afterbegin", skeleton() + skeleton());
     }
   });
-  document.body.addEventListener("htmx:afterSwap", function () {
+  document.addEventListener("htmx:afterSwap", function () {
     document.querySelectorAll(".card.skeleton").forEach(function (node) { node.remove(); });
   });
 
   function bindDrop(drop) {
+    if (drop.dataset.bound) return;
+    drop.dataset.bound = "1";
     var input = drop.querySelector('input[type="file"]');
     var preview = drop.querySelector("img");
     var hint = drop.querySelector(".drop-hint");
@@ -206,6 +226,8 @@
   }
 
   function bindPublish(form) {
+    if (form.dataset.bound) return;
+    form.dataset.bound = "1";
     form.addEventListener("submit", function (event) {
       if (!validatePublish(form)) {
         event.preventDefault();
@@ -238,6 +260,8 @@
   }
 
   function bindReview(form) {
+    if (form.dataset.bound) return;
+    form.dataset.bound = "1";
     form.addEventListener("submit", function (event) {
       event.preventDefault();
       var data = new FormData(form);
