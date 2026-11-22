@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 
 ROOT = Path(__file__).resolve().parents[1]
 MEDIA_ROOT = tempfile.mkdtemp(prefix="skytrace-media-")
@@ -40,6 +41,15 @@ async def engine():
     app.state.session_factory = make_session_factory(db_engine)
     yield db_engine
     await db_engine.dispose()
+
+
+@pytest.fixture
+async def client(engine):
+    from app.main import app
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as http:
+        yield http
 
 
 @pytest.fixture(scope="session", autouse=True)

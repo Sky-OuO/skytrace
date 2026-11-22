@@ -21,11 +21,12 @@ from app.auth.manager import UserManager
 from app.catalog import CHANNELS, CHANNEL_CODES, FACET_NAMES, FACETS
 from app.config import get_settings
 from app.db import get_session
-from app.domain import UNSORTED_SLUG, can_transition, note_requires_portrait_auth
+from app.domain import NOTE_TYPES, UNSORTED_SLUG, can_transition, note_requires_portrait_auth
 from app.errors import ApiError
 from app.models import Media, Note, ReviewTicket, Subject, Tag, User
 from app.schemas import DecideIn, LoginIn, NoteWriteIn
 from app.services.storage import preview_url_for, read_upload, store_image
+from app.services.topics import notes_for_subject, public_subject
 
 router = APIRouter()
 
@@ -165,6 +166,21 @@ async def get_subject(slug: str, session: AsyncSession = Depends(get_session)) -
     if subject is None or subject.slug == UNSORTED_SLUG:
         raise ApiError(404, "NOT_FOUND", "对象不存在")
     return jsonable_encoder(subject_payload(subject))
+
+
+@router.get("/subjects/{slug}/notes", tags=["subjects"])
+async def list_subject_notes(
+    slug: str,
+    type: str | None = None,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    if type is not None and type not in NOTE_TYPES:
+        raise ApiError(400, "VALIDATION_ERROR", "未知笔记类型")
+    subject = await public_subject(session, slug)
+    if subject is None:
+        raise ApiError(404, "NOT_FOUND", "对象不存在")
+    items = await notes_for_subject(session, subject.id, note_type=type)
+    return jsonable_encoder({"items": items, "total": len(items)})
 
 
 @router.post("/media", tags=["media"])
