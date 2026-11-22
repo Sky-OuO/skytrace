@@ -1,10 +1,11 @@
 DEMO_QUERIES = (
-    ("窗边人像", "window-portrait"),
-    ("西餐厅", "window-portrait"),
-    ("火车窗边", "window-portrait"),
-    ("黄山", "huangshan"),
-    ("光明顶", "huangshan"),
-    ("黄山云海", "huangshan"),
+    ("窗边人像", "window-light-portrait"),
+    ("西餐厅", "window-light-portrait"),
+    ("火车窗边", "window-light-portrait"),
+    ("高铁窗边", "window-light-portrait"),
+    ("黄山", "sea-of-clouds-sunrise"),
+    ("光明顶", "sea-of-clouds-sunrise"),
+    ("黄山云海", "sea-of-clouds-sunrise"),
 )
 
 
@@ -12,7 +13,7 @@ async def test_demo_search_terms_hit_topics_before_works(client):
     for query, slug in DEMO_QUERIES:
         payload = (await client.get("/api/v1/search", params={"q": query})).json()
         assert payload["topics"], query
-        assert payload["topics"][0]["slug"] == slug or any(item["slug"] == slug for item in payload["topics"])
+        assert payload["topics"][0]["slug"] == slug
         assert payload["items"][0]["kind"] == "topic"
         page = await client.get("/search", params={"q": query})
         assert page.status_code == 200

@@ -70,6 +70,8 @@ def subject_payload(subject: Subject) -> dict[str, Any]:
         "tagline": subject.tagline,
         "aliases": list(subject.aliases or []),
         "guide": subject.guide,
+        "notices": list(subject.notices or []),
+        "pending_verify": list(subject.pending_verify or []),
         "guide_summary": subject.guide_summary,
         "cover_media_id": subject.cover_media_id,
         "created_at": subject.created_at,

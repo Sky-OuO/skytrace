@@ -176,10 +176,25 @@ class SubjectSeed(BaseModel):
     aliases: list[str] = Field(default_factory=list)
     guide: SubjectGuide
     examples: list[SubjectExampleSeed] = Field(default_factory=list)
+    notices: list[str] = Field(default_factory=list)
+    pending_verify: list[str] = Field(default_factory=list)
     geo_text: str | None = None
     safety_notes: str | None = None
     condition_axes: list[str] = Field(default_factory=list)
     type: Literal["location", "scene", "theme"] | None = None
+
+    @field_validator("notices", "pending_verify")
+    @classmethod
+    def clean_lists(cls, value: list[str]) -> list[str]:
+        cleaned = []
+        for item in value:
+            text = str(item).strip()
+            if not text:
+                continue
+            if "私房" in text:
+                raise ValueError("公开文案不能出现禁用词")
+            cleaned.append(text)
+        return cleaned
 
     @field_validator("tagline", "name", "geo_text", "safety_notes")
     @classmethod

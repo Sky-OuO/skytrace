@@ -26,12 +26,15 @@ STATUS_LABELS = {
 }
 
 TOPIC_TAGS = {
-    "window-portrait": ("indoor", "window-light"),
-    "window-light-studio": ("indoor", "studio-light", "casual"),
+    "window-light-portrait": ("indoor", "window-light"),
+    "studio-one-light": ("indoor", "studio-light", "casual"),
     "street-natural-light": ("outdoor", "available-light", "street"),
     "city-night-portrait": ("outdoor", "night-light"),
-    "expo-cos": ("indoor", "mixed-light", "cos"),
+    "cosplay-event": ("indoor", "mixed-light", "cos"),
 }
+
+# 光明顶不在编辑种子里，它是黄山的旧机位名。搜这个词时按黄山去对「山岳云海日出」。
+SEARCH_EXPANSIONS = (("光明顶", "黄山"),)
 
 REQUIRED_FIELDS = {
     "lighting": ("key_light",),
@@ -68,15 +71,22 @@ async def find_topics(
     text = query.strip()
     statement = select(Subject).where(Subject.slug != UNSORTED_SLUG)
     if text:
-        like = f"%{text}%"
-        statement = statement.outerjoin(SubjectExample, SubjectExample.subject_id == Subject.id).where(
-            or_(
-                Subject.name.like(like),
-                Subject.tagline.like(like),
-                cast(Subject.aliases, String).like(like),
-                SubjectExample.name.like(like),
+        terms = [text]
+        for needle, extra in SEARCH_EXPANSIONS:
+            if needle in text and extra not in terms:
+                terms.append(extra)
+        clauses = []
+        for term in terms:
+            like = f"%{term}%"
+            clauses.append(
+                or_(
+                    Subject.name.like(like),
+                    Subject.tagline.like(like),
+                    cast(Subject.aliases, String).like(like),
+                    SubjectExample.name.like(like),
+                )
             )
-        )
+        statement = statement.outerjoin(SubjectExample, SubjectExample.subject_id == Subject.id).where(or_(*clauses))
     statement = statement.order_by(Subject.name).limit(max(limit * 5, 80))
     found: list[Subject] = []
     seen: set[UUID] = set()

@@ -12,6 +12,20 @@
   {% if subject.safety_notes %}
     <p class="quiet">{{ subject.safety_notes }}</p>
   {% endif %}
+  {% if subject.notices %}
+    <ul class="guide-list">
+      {% for item in subject.notices %}
+        <li class="guide-line">{{ item }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if subject.pending_verify %}
+    <ul class="guide-list">
+      {% for item in subject.pending_verify %}
+        <li class="guide-line">{{ item }} <span class="tag">待核实</span></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 
   <nav class="section-nav" aria-label="题材段落">
     {% for section in sections %}
@@ -68,7 +82,7 @@
                 {% for example in examples %}
                   <li>
                     <strong>{{ example.name }}</strong>
-                    <span class="tag">{{ example.verify_label }}</span>
+                    {% if example.verify_status == 'pending' %}<span class="tag">待核实</span>{% endif %}
                     {% if example.note %}<p>{{ example.note }}</p>{% endif %}
                     {% if example.geo_text %}<p class="geo">{{ example.geo_text }}</p>{% endif %}
                   </li>

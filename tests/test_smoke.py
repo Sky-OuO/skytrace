@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 AUTHOR = {"email": "author@skytrace.local", "password": "author-demo-pass"}
 REVIEWER = {"email": "reviewer@skytrace.local", "password": "reviewer-demo-pass"}
 
-HERO_SUBJECTS = {"huangshan", "window-portrait", "window-light-studio", "shanghai-bund"}
+HERO_SUBJECTS = {"sea-of-clouds-sunrise", "window-light-portrait", "mirror-reflection", "street-natural-light"}
 EXPECTED_TAGS = {
     "indoor",
     "outdoor",
@@ -79,7 +79,7 @@ API_PATHS = {
     "/api/v1/search/parse",
     "/api/v1/publish/suggest",
 }
-PUBLIC_PAGES = ["/", "/c/landscape", "/c/portrait", "/search", "/login", "/s/huangshan", "/s/window-portrait"]
+PUBLIC_PAGES = ["/", "/c/landscape", "/c/portrait", "/search", "/login", "/s/sea-of-clouds-sunrise", "/s/window-light-portrait"]
 
 
 def test_note_field_keys_match_spec():
@@ -158,7 +158,7 @@ async def test_schema_indexes_and_search_vector(engine: AsyncEngine):
         subject_columns = await conn.run_sync(columns, "subjects")
         note_columns = await conn.run_sync(columns, "notes")
         tables = await conn.run_sync(lambda sync_conn: set(inspect(sync_conn).get_table_names()))
-    assert {"tagline", "aliases", "guide"} <= subject_columns
+    assert {"tagline", "aliases", "guide", "notices", "pending_verify"} <= subject_columns
     assert "example_id" in note_columns
     assert "subject_examples" in tables
     migration = (ROOT / "alembic" / "versions" / "0002_topics.py").read_text(encoding="utf-8")
@@ -250,8 +250,7 @@ async def test_vocab_channels_and_subjects(client: AsyncClient):
     channels = await client.get("/api/v1/channels")
     counts = {item["code"]: item["subject_count"] for item in channels.json()["items"]}
     assert set(counts) == {"landscape", "portrait"}
-    assert counts["landscape"] >= 30
-    assert counts["portrait"] >= 4
+    assert counts == {"landscape": 19, "portrait": 18}
     assert channels.json()["pageSize"] == 20
     subjects = await client.get("/api/v1/subjects", params={"pageSize": 50})
     body = subjects.json()
@@ -261,8 +260,8 @@ async def test_vocab_channels_and_subjects(client: AsyncClient):
     assert "unsorted" not in slugs
     assert "cafe-window" not in slugs
     names = {item["slug"]: item["name"] for item in body["items"]}
-    assert names["window-portrait"] == "窗边人像"
-    assert names["window-light-studio"] == "窗光棚"
+    assert names["window-light-portrait"] == "窗边人像"
+    assert names["sea-of-clouds-sunrise"] == "山岳云海日出"
     portrait = await client.get("/api/v1/subjects", params={"channel": "portrait", "pageSize": 50})
     assert portrait.json()["total"] == counts["portrait"]
     culture = await client.get("/api/v1/subjects", params={"channel": "culture"})
@@ -270,9 +269,15 @@ async def test_vocab_channels_and_subjects(client: AsyncClient):
     unknown = await client.get("/api/v1/subjects", params={"channel": "studio"})
     assert unknown.status_code == 400
     assert unknown.json()["error"]["code"] == "VALIDATION_ERROR"
-    detail = await client.get("/api/v1/subjects/huangshan")
-    assert detail.json()["condition_axes"] == ["季节", "时段", "天气"]
-    assert len(detail.json()["guide"]["finished_points"]) >= 2
+    detail = await client.get("/api/v1/subjects/sea-of-clouds-sunrise")
+    assert "云海铺满低处，山峰露出" in detail.json()["guide"]["finished_points"]
+    assert detail.json()["pending_verify"]
+    legacy = await client.get("/s/huangshan", follow_redirects=False)
+    assert legacy.status_code == 302
+    assert legacy.headers["location"].startswith("/s/sea-of-clouds-sunrise")
+    legacy_window = await client.get("/s/window-portrait", follow_redirects=False)
+    assert legacy_window.status_code == 302
+    assert legacy_window.headers["location"].startswith("/s/window-light-portrait")
     hidden = await client.get("/api/v1/subjects/unsorted")
     assert hidden.status_code == 404
     missing = await client.get("/api/v1/subjects/missing-subject")
@@ -346,8 +351,8 @@ async def test_public_note_read_and_submit_guards(client: AsyncClient, engine: A
     author_id = UUID((await client.get("/api/v1/auth/me")).json()["id"])
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as session:
-        subject = (await session.exec(select(Subject).where(Subject.slug == "window-portrait"))).one()
-        mountain = (await session.exec(select(Subject).where(Subject.slug == "huangshan"))).one()
+        subject = (await session.exec(select(Subject).where(Subject.slug == "window-light-portrait"))).one()
+        mountain = (await session.exec(select(Subject).where(Subject.slug == "sea-of-clouds-sunrise"))).one()
         draft = Note(
             author_id=author_id,
             subject_id=subject.id,

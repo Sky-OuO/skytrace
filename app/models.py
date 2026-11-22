@@ -81,6 +81,8 @@ class Subject(SQLModel, table=True):
     tagline: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     aliases: list[str] = Field(default_factory=list, sa_column=json_column(nullable=False))
     guide: dict[str, Any] | None = Field(default=None, sa_column=json_column(nullable=True))
+    notices: list[str] = Field(default_factory=list, sa_column=json_column(nullable=True))
+    pending_verify: list[str] = Field(default_factory=list, sa_column=json_column(nullable=True))
     cover_media_id: UUID | None = Field(default=None, foreign_key="media.id", nullable=True)
     guide_summary: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     created_by: UUID | None = Field(default=None, foreign_key="users.id", nullable=True)

@@ -693,6 +693,7 @@ PORTRAITS = [
 
 
 def main() -> None:
+    raise SystemExit("seeds/subjects.json 以编辑审过的 37 个题材为准，这个生成脚本不再覆盖它。")
     subjects = [landscape_subject(row) for row in PLACES]
     subjects.extend(PORTRAITS)
     text = json.dumps(subjects, ensure_ascii=False, indent=2)

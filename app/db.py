@@ -41,6 +41,19 @@ async def ensure_schema(engine: AsyncEngine) -> None:
 
     async with engine.begin() as connection:
         await connection.run_sync(SQLModel.metadata.create_all)
+        await connection.run_sync(_add_sqlite_subject_columns)
+
+
+def _add_sqlite_subject_columns(sync_conn) -> None:
+    """已有的 SQLite 文件不会因为 create_all 加列。"""
+    from sqlalchemy import text
+
+    rows = sync_conn.execute(text("PRAGMA table_info(subjects)")).all()
+    names = {row[1] for row in rows}
+    if "notices" not in names:
+        sync_conn.execute(text("ALTER TABLE subjects ADD COLUMN notices JSON"))
+    if "pending_verify" not in names:
+        sync_conn.execute(text("ALTER TABLE subjects ADD COLUMN pending_verify JSON"))
 
 
 def make_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
