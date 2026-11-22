@@ -33,3 +33,4 @@ class NoteWriteIn(BaseModel):
 class DecideIn(BaseModel):
     decision: str | None = None
     reason: str | None = None
+    subject_id: UUID | None = None

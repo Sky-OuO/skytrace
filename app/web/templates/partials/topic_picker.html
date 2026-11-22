@@ -1,0 +1,22 @@
+{% for topic in topics %}
+  <label class="choice">
+    <input type="radio" name="subject_slug" value="{{ topic.slug }}" {% if selected == topic.slug %}checked{% endif %}>
+    {{ topic.name }}
+    <span class="byline">{% if topic.primary_channel == 'portrait' %}人像{% else %}风光{% endif %} · {{ topic.tagline }}</span>
+  </label>
+{% else %}
+  <p class="empty-note">没有匹配的题材。可以选下面的待归类。</p>
+{% endfor %}
+{% if oob %}
+<div id="example-slot" hx-swap-oob="outerHTML">
+  {% if examples %}
+    <label for="example">地点例子，可选</label>
+    <select id="example" name="example_id">
+      <option value="">不指定</option>
+      {% for example in examples %}
+        <option value="{{ example.id }}">{{ example.name }}</option>
+      {% endfor %}
+    </select>
+  {% endif %}
+</div>
+{% endif %}

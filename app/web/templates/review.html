@@ -1,7 +1,33 @@
 {% extends "base.html" %}
 {% block title %}审核台 · SkyTrace{% endblock %}
 {% block content %}
-  <p class="text-xs tracking-[0.22em] text-stone-500">仅审核员</p>
-  <h1 class="mt-3 font-serif text-4xl">审核台</h1>
-  <p class="mt-4 max-w-2xl text-sm leading-7 text-stone-700">审核台还是占位。工单列表和通过、驳回会在后面接上。当前没有待处理工单。</p>
+  <h1 class="font-serif text-3xl">审核台</h1>
+  <p class="mt-2 text-sm text-stone-600">只有已通过、并且挂在公开题材上的笔记才会出现在首页。</p>
+  {% if tickets %}
+    {% for ticket in tickets %}
+      <article class="review-card">
+        <p class="byline">{{ ticket.note.author.display_name }} · {{ ticket.note.type_name }}</p>
+        <h2 class="font-serif text-2xl">{{ ticket.note.title }}</h2>
+        {% if ticket.note.body %}<p>{{ ticket.note.body }}</p>{% endif %}
+        <p class="byline">当前题材：{{ ticket.subject.name }}{% if ticket.unsorted %}（待归类，通过前必须改挂）{% endif %}</p>
+        <form method="post" action="/review/{{ ticket.id }}">
+          <label for="subject-{{ ticket.id }}">改挂题材</label>
+          <select id="subject-{{ ticket.id }}" name="subject_id">
+            <option value="">不改</option>
+            {% for topic in topics %}
+              <option value="{{ topic.id }}">{{ topic.name }}</option>
+            {% endfor %}
+          </select>
+          <label for="reason-{{ ticket.id }}">驳回理由</label>
+          <input id="reason-{{ ticket.id }}" name="reason" type="text" placeholder="驳回时填写">
+          <p class="form-actions">
+            <button class="primary" type="submit" name="decision" value="approved">通过</button>
+            <button type="submit" name="decision" value="rejected">驳回</button>
+          </p>
+        </form>
+      </article>
+    {% endfor %}
+  {% else %}
+    <p class="empty-note">当前没有待处理工单。</p>
+  {% endif %}
 {% endblock %}

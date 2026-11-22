@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}我的笔记 · SkyTrace{% endblock %}
+{% block content %}
+  <h1 class="font-serif text-3xl">我的笔记</h1>
+  {% if notice %}
+    <p class="form-error" role="status">{{ notice }}</p>
+  {% endif %}
+  {% if notes %}
+    <ul class="note-list">
+      {% for note in notes %}
+        <li>
+          <strong>{{ note.title }}</strong>
+          <span class="status-pill">{{ note.status_label }}</span>
+          {% if note.unsorted %}<span class="status-pill">待归类</span>{% endif %}
+          <p class="byline">{{ note.subject.name }} · {{ note.type_name }}</p>
+          {% if note.body %}<p>{{ note.body }}</p>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty-note">还没有笔记。<a href="/publish">记一笔</a></p>
+  {% endif %}
+{% endblock %}

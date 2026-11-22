@@ -21,12 +21,16 @@ from app.auth.manager import UserManager
 from app.catalog import CHANNELS, CHANNEL_CODES, FACET_NAMES, FACETS
 from app.config import get_settings
 from app.db import get_session
-from app.domain import NOTE_TYPES, UNSORTED_SLUG, can_transition, note_requires_portrait_auth
+from app.domain import NOTE_TYPES, UNSORTED_SLUG
 from app.errors import ApiError
-from app.models import Media, Note, ReviewTicket, Subject, Tag, User
+from app.models import Media, Note, Subject, Tag, User
 from app.schemas import DecideIn, LoginIn, NoteWriteIn
 from app.services.storage import preview_url_for, read_upload, store_image
 from app.services.feed import load_feed
+from app.services.publishing import create_note as create_note_row
+from app.services.publishing import decide_ticket as decide_ticket_row
+from app.services.publishing import my_notes as list_my_notes
+from app.services.publishing import note_payload, pending_tickets, submit_note as submit_note_row, update_note as update_note_row
 from app.services.topics import notes_for_subject, public_subject
 
 router = APIRouter()
@@ -189,6 +193,7 @@ async def upload_media(
     file: UploadFile = File(...),
     role: str = Form("photo"),
     alt: str | None = Form(None),
+    note_id: UUID | None = Form(None),
     user: User = Depends(require_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
@@ -198,6 +203,14 @@ async def upload_media(
         raise ApiError(400, "VALIDATION_ERROR", "alt 过长")
     data = await read_upload(file)
     stored = store_image(data)
+    if note_id is not None:
+        note = await session.get(Note, note_id)
+        if note is None:
+            raise ApiError(404, "NOT_FOUND", "笔记不存在")
+        if note.author_id != user.id:
+            raise ApiError(403, "FORBIDDEN", "只能给自己的笔记加图")
+        if note.status == "approved":
+            raise ApiError(409, "CONFLICT", "已过审笔记不能直接修改")
     media = Media(
         storage_key=stored.storage_key,
         mime=stored.mime,
@@ -206,6 +219,7 @@ async def upload_media(
         height=stored.height,
         role=role,
         alt=alt,
+        note_id=note_id,
         created_by=user.id,
     )
     session.add(media)
@@ -255,13 +269,17 @@ async def create_note(
     user: User = Depends(require_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    del user
-    if body.subject_id is None:
-        raise ApiError(422, "UNPROCESSABLE", "未选对象")
-    subject = await session.get(Subject, body.subject_id)
-    if subject is None:
-        raise ApiError(404, "NOT_FOUND", "对象不存在")
-    raise ApiError(422, "UNPROCESSABLE", "笔记保存将在后续天数开放")
+    note = await create_note_row(
+        session,
+        user,
+        subject_id=body.subject_id,
+        note_type=body.type,
+        title=body.title,
+        body=body.body,
+        fields=body.fields,
+        portrait_auth_accepted=bool(body.portrait_auth_accepted),
+    )
+    return jsonable_encoder(note_payload(note, user))
 
 
 @router.patch("/notes/{note_id}", tags=["notes"])
@@ -271,15 +289,18 @@ async def update_note(
     user: User = Depends(require_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    del body
-    note = await session.get(Note, note_id)
-    if note is None:
-        raise ApiError(404, "NOT_FOUND", "笔记不存在")
-    if note.author_id != user.id:
-        raise ApiError(403, "FORBIDDEN", "只能修改自己的笔记")
-    if note.status == "approved":
-        raise ApiError(409, "CONFLICT", "已过审笔记不能直接修改")
-    raise ApiError(422, "UNPROCESSABLE", "笔记修改将在后续天数开放")
+    note = await update_note_row(
+        session,
+        user,
+        note_id,
+        subject_id=body.subject_id,
+        note_type=body.type,
+        title=body.title,
+        body=body.body,
+        fields=body.fields,
+        portrait_auth_accepted=body.portrait_auth_accepted,
+    )
+    return jsonable_encoder(note_payload(note, user))
 
 
 @router.post("/notes/{note_id}/submit", tags=["notes"])
@@ -288,36 +309,31 @@ async def submit_note(
     user: User = Depends(require_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    note = await session.get(Note, note_id)
-    if note is None:
-        raise ApiError(404, "NOT_FOUND", "笔记不存在")
-    if note.author_id != user.id:
-        raise ApiError(403, "FORBIDDEN", "只能提交自己的笔记")
-    if not can_transition(note.status, "pending_review"):
-        raise ApiError(409, "CONFLICT", "当前状态不能提交")
-    subject = await session.get(Subject, note.subject_id)
-    channel = subject.primary_channel if subject is not None else ""
-    if note_requires_portrait_auth(note.type, channel) and not note.portrait_auth_accepted:
-        raise ApiError(422, "UNPROCESSABLE", "人像笔记提交前需要确认肖像授权")
-    raise ApiError(422, "UNPROCESSABLE", "提交审核将在后续天数开放")
+    note = await submit_note_row(session, user, note_id)
+    return jsonable_encoder(note_payload(note, user))
 
 
 @router.get("/me/notes", tags=["notes"])
 async def my_notes(
     user: User = Depends(require_user),
     page: PageQuery = Depends(),
+    session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    del user
-    return envelope([], 0, page)
+    items = await list_my_notes(session, user)
+    start = (page.page - 1) * page.page_size
+    return envelope(items[start : start + page.page_size], len(items), page)
 
 
 @router.get("/review/tickets", tags=["review"])
 async def list_tickets(
     user: User = Depends(require_reviewer),
     page: PageQuery = Depends(),
+    session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     del user
-    return envelope([], 0, page)
+    items = await pending_tickets(session)
+    start = (page.page - 1) * page.page_size
+    return envelope(items[start : start + page.page_size], len(items), page)
 
 
 @router.post("/review/tickets/{ticket_id}/decide", tags=["review"])
@@ -327,13 +343,18 @@ async def decide_ticket(
     user: User = Depends(require_reviewer),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    del user
-    if body is not None and body.decision is not None and body.decision not in {"approved", "rejected"}:
-        raise ApiError(400, "VALIDATION_ERROR", "审核决定只能是通过或驳回")
-    ticket = await session.get(ReviewTicket, ticket_id)
-    if ticket is None:
-        raise ApiError(404, "NOT_FOUND", "审核工单不存在")
-    raise ApiError(422, "UNPROCESSABLE", "审核决定将在后续天数开放")
+    decision = None if body is None else body.decision
+    reason = None if body is None else body.reason
+    subject_id = None if body is None else body.subject_id
+    ticket = await decide_ticket_row(
+        session,
+        user,
+        ticket_id,
+        decision=decision,
+        reason=reason,
+        subject_id=subject_id,
+    )
+    return jsonable_encoder({"id": ticket.id, "status": ticket.status, "reason": ticket.reason})
 
 
 @router.get("/feed", tags=["feed"])
